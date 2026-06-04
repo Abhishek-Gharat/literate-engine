@@ -1,5 +1,6 @@
 import express from 'express'
 import helmet from 'helmet'
+import cors from 'cors'
 import { initializeDatabase, getDatabase } from './db/init.js'
 import analysisRoutes from './routes/analysisRoutes.js'
 import projectsRoutes from './routes/projectsRoutes.js'
@@ -28,6 +29,20 @@ export function createApp() {
 
   app.disable('x-powered-by')
   app.use(helmet())
+  
+  // Configure CORS
+  const corsOrigins = [
+    'https://literate-engine-git-master-abhishek-gharats-projects.vercel.app',
+    'http://localhost:5173', // Vite dev server
+    'http://localhost:3000', // Alternative local dev
+  ]
+  app.use(cors({
+    origin: corsOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }))
+  
   app.use(requestContext)
   app.use(requestLogger)
   app.use(express.json({ limit: '1mb', strict: true }))
