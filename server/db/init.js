@@ -1,9 +1,13 @@
 import Database from 'better-sqlite3'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { mkdirSync } from 'node:fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const dbPath = join(__dirname, '../../data/reactviz.db')
+
+// Use environment variable for data directory, with fallback to default
+const dataDir = process.env.DATA_DIR || join(process.cwd(), 'data')
+const dbPath = join(dataDir, 'reactviz.db')
 
 let db = null
 
@@ -14,6 +18,10 @@ export function initializeDatabase() {
   }
 
   try {
+    // Ensure data directory exists
+    mkdirSync(dataDir, { recursive: true })
+    console.log(`[DB] Data directory ensured at: ${dataDir}`)
+
     db = new Database(dbPath)
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
@@ -48,10 +56,16 @@ export function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_runs_project ON analysis_runs(project_id)
     `)
 
-    console.log(`[DB] Initialized at ${dbPath}`)
+    console.log(`[DB] ✓ Database initialized successfully`)
+    console.log(`[DB] Path: ${dbPath}`)
+    console.log(`[DB] Tables created: projects, analysis_runs`)
     return db
   } catch (error) {
-    console.error('[DB] Initialization failed:', error.message)
+    console.error('[DB] ✗ Initialization failed')
+    console.error('[DB] Error:', error.message)
+    console.error('[DB] Stack:', error.stack)
+    console.error('[DB] Data directory:', dataDir)
+    console.error('[DB] Database path:', dbPath)
     throw new Error(`Database initialization failed: ${error.message}`)
   }
 }
