@@ -1,6 +1,14 @@
 const API_BASE = import.meta.env.VITE_REACTVIZ_API_URL || ''
 const REQUEST_TIMEOUT = 10000 // 10 seconds
 
+/**
+ * Check if the backend API is available
+ * For Vercel static hosting without a backend, this will be false
+ */
+export function isBackendAvailable() {
+  return API_BASE !== '' || import.meta.env.DEV === true
+}
+
 function fetchWithTimeout(url, options, timeout = REQUEST_TIMEOUT) {
   return Promise.race([
     fetch(url, options),
@@ -21,6 +29,19 @@ function handleApiError(error, defaultMessage) {
 }
 
 export async function createProject(name, description = '') {
+  // If no backend configured, return a mock project for client-side only mode
+  if (!isBackendAvailable()) {
+    console.log('[ProjectsAPI] No backend available, using client-side mock project')
+    return {
+      id: 'local-' + Date.now(),
+      name: name.trim(),
+      description: description.trim() || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      _local: true // Mark as local-only project
+    }
+  }
+
   try {
     const response = await fetchWithTimeout(`${API_BASE}/api/projects`, {
       method: 'POST',
@@ -40,6 +61,12 @@ export async function createProject(name, description = '') {
 }
 
 export async function listProjects() {
+  // If no backend configured, return empty list for client-side only mode
+  if (!isBackendAvailable()) {
+    console.log('[ProjectsAPI] No backend available, returning empty project list')
+    return []
+  }
+
   try {
     const response = await fetchWithTimeout(`${API_BASE}/api/projects`)
 
@@ -56,6 +83,18 @@ export async function listProjects() {
 }
 
 export async function getProject(id) {
+  // If no backend configured and it's a local project, return mock
+  if (!isBackendAvailable() && id.startsWith('local-')) {
+    return {
+      id: id,
+      name: 'Local Project',
+      description: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      _local: true
+    }
+  }
+
   try {
     const response = await fetchWithTimeout(`${API_BASE}/api/projects/${id}`)
 

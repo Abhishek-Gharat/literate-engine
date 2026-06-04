@@ -1,6 +1,14 @@
 const API_BASE = import.meta.env.VITE_REACTVIZ_API_URL || ''
 const REQUEST_TIMEOUT = 10000 // 10 seconds
 
+/**
+ * Check if the backend API is available
+ * For Vercel static hosting without a backend, this will be false
+ */
+export function isBackendAvailable() {
+  return API_BASE !== '' || import.meta.env.DEV === true
+}
+
 function fetchWithTimeout(url, options, timeout = REQUEST_TIMEOUT) {
   return Promise.race([
     fetch(url, options),
@@ -21,6 +29,12 @@ function handleApiError(error, defaultMessage) {
 }
 
 export async function listRuns(projectId) {
+  // If no backend configured, return empty list for client-side only mode
+  if (!isBackendAvailable()) {
+    console.log('[RunsAPI] No backend available, returning empty runs list')
+    return []
+  }
+
   try {
     const response = await fetchWithTimeout(`${API_BASE}/api/projects/${projectId}/runs`)
 
@@ -37,6 +51,12 @@ export async function listRuns(projectId) {
 }
 
 export async function getRun(runId) {
+  // If no backend configured, return null for client-side only mode
+  if (!isBackendAvailable()) {
+    console.log('[RunsAPI] No backend available, returning null run')
+    return null
+  }
+
   try {
     const response = await fetchWithTimeout(`${API_BASE}/api/runs/${runId}`)
 
