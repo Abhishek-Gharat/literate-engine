@@ -28,7 +28,8 @@ export default function UploadCenter({
   analysisError,
   analysisSuccess,
   onLocalFiles,
-  onGithubFetch
+  onGithubFetch,
+  onTryDemo
 }) {
   const inputRef = useRef()
   const hasProject = Boolean(selectedProject)
@@ -318,8 +319,6 @@ export default function UploadCenter({
       </div>
 
       <div style={{
-        width: '100%',
-        maxWidth: 'none',
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
         gap: '24px'
@@ -420,7 +419,8 @@ export default function UploadCenter({
 
         <div style={{
           minHeight: '160px',
-          background: '#7c3aed',
+          background: '#1a1a2e',
+          border: '1px solid #2a2a3d',
           borderRadius: '8px',
           padding: '20px',
           color: '#fff',
@@ -428,27 +428,58 @@ export default function UploadCenter({
           position: 'relative',
           overflow: 'hidden'
         }}>
-          <h2 style={{ margin: 0, fontSize: '20px' }}>Visualization Hub</h2>
-          <p style={{ margin: '12px 0 0', fontSize: '15px', lineHeight: '1.45', color: '#ead7ff' }}>
-            {hasAnalysis 
-              ? `View ${componentsFound} components with ${latestStats.totalEdges || 0} connections. ${latestStats.cyclesFound || 0} circular dependencies detected.`
-              : 'Explore the interactive component dependency graph to identify performance bottlenecks.'}
+          <h2 style={{ margin: 0, fontSize: '20px', color: '#f1f5f9' }}>Try Demo Project</h2>
+          <p style={{ margin: '12px 24px 16px 0', fontSize: '15px', lineHeight: '1.45', color: '#94a3b8' }}>
+            See ReactViz in action with a pre-configured e-commerce React app. 
+            No setup required — explore the architecture instantly.
           </p>
+          <button
+            onClick={onTryDemo}
+            disabled={isAnalyzing}
+            style={{
+              padding: '10px 20px',
+              background: '#6366f1',
+              border: 'none',
+              borderRadius: '6px',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: isAnalyzing ? 'not-allowed' : 'pointer',
+              opacity: isAnalyzing ? 0.5 : 1,
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              if (!isAnalyzing) {
+                e.currentTarget.style.background = '#4f46e5'
+                e.currentTarget.style.transform = 'translateY(-1px)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#6366f1'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+          >
+            <span>▶</span>
+            Try Demo
+          </button>
           <div style={{
             position: 'absolute',
             right: '24px',
-            bottom: '22px',
-            width: '72px',
-            height: '72px',
-            borderRadius: '50%',
-            border: '10px solid #a978ff55',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '64px',
+            height: '64px',
+            borderRadius: '12px',
+            background: '#6366f115',
+            border: '1px solid #6366f130',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: '#ffffff'
-          }}>{hasAnalysis ? componentsFound : '○'}</div>
+            fontSize: '28px'
+          }}>🚀</div>
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import { StatsDisplay } from './components/StatBadge'
 import { ImportList, EmptyState } from './components/NodeCard'
 import { getNodeColor } from './utils/nodeColors.js'
 import { COLORS, SPACING, LAYOUT, TYPOGRAPHY, NODE_LEGEND_ITEMS } from './styles/constants.js'
+import { DemoExperience } from './demo/DemoExperience.jsx'
 
 function App() {
   const { buildGraph, loadSnapshot, resetGraph, nodes, edges, depMap, stats, loading: analysisLoading, error: analysisError } = useGraphBuilder()
@@ -22,6 +23,7 @@ function App() {
   const [selectedProject, setSelectedProject] = useState(null)
   const [runs, setRuns] = useState([])
   const [selectedRun, setSelectedRun] = useState(null)
+  const [demoMode, setDemoMode] = useState(false)
 
   const handleFilesReady = useCallback(async (files, projectId) => {
     try {
@@ -48,19 +50,15 @@ function App() {
 
   const handleSelectRun = useCallback((runOrId) => {
     if (typeof runOrId === 'string') {
-      // If passed an ID, look it up in runs
       const run = runs.find(r => r.id === runOrId)
       setSelectedRun(run || null)
     } else {
-      // Passed a run object directly
       setSelectedRun(runOrId || null)
     }
   }, [runs])
 
   const handleRunsChange = useCallback((newRuns) => {
     setRuns(newRuns)
-    // Auto-select the newest run (first in list, assuming sorted by date desc)
-    // Always update to newest run when runs change
     if (newRuns.length > 0) {
       setSelectedRun(newRuns[0])
     }
@@ -68,6 +66,7 @@ function App() {
 
   const handleBackToInput = () => {
     setGraphReady(false)
+    setDemoMode(false)
     closeInspector()
     resetGraph()
   }
@@ -78,12 +77,19 @@ function App() {
 
   const handleShowInspector = () => {
     // Opens inspector without changing selected node
-    // This is used when clicking "Ask AI about this file" button
-    // selectedNode is already set
   }
 
   const handleSendMessage = (text) => {
     sendMessage(text, apiKey, selectedNode, depMap, stats)
+  }
+
+  const handleTryDemo = () => {
+    setDemoMode(true)
+  }
+
+  // Demo mode
+  if (demoMode) {
+    return <DemoExperience onBackToApp={handleBackToInput} />
   }
 
   if (!graphReady) {
@@ -96,7 +102,6 @@ function App() {
         fontFamily: 'system-ui, -apple-system, sans-serif',
         overflow: 'hidden'
       }}>
-        {/* Main dashboard area with FileInput */}
         <div style={{
           flex: 1,
           display: 'flex',
@@ -112,6 +117,7 @@ function App() {
             selectedRunId={selectedRun?.id}
             onSelectRun={handleSelectRun}
             onRunsChange={handleRunsChange}
+            onTryDemo={handleTryDemo}
           />
         </div>
       </div>
@@ -321,10 +327,7 @@ function App() {
             )}
 
             <button
-              onClick={() => {
-                // Opens AI chat panel
-                // showInspector is managed by useNodeSelection hook
-              }}
+              onClick={() => {}}
               style={{
                 width: '100%', padding: '9px',
                 background: apiKey ? '#7c3aed' : '#13131f',

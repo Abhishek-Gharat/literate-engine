@@ -219,10 +219,16 @@ export function useFileInput({
     }
   }, [githubUrl, onFilesReady, loadRuns])
 
-  const handleLoadRun = useCallback(async (runId) => {
+  const handleLoadRun = useCallback(async (runOrId) => {
     try {
+      // Handle both run object and run ID string
+      const runId = typeof runOrId === 'object' ? runOrId?.id : runOrId
+      if (!runId) {
+        setError('Invalid run identifier')
+        return
+      }
       const run = await getRun(runId)
-      if (run.snapshot) {
+      if (run?.snapshot) {
         onLoadRun(run.snapshot, run)
         if (onSelectRun) onSelectRun(run)
       }

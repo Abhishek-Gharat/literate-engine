@@ -32,6 +32,7 @@ export function createApp() {
   
   // Configure CORS
   const corsOrigins = [
+    'https://literate-engine-chi.vercel.app',
     'https://literate-engine-git-master-abhishek-gharats-projects.vercel.app',
     'http://localhost:5173', // Vite dev server
     'http://localhost:3000', // Alternative local dev

@@ -29,7 +29,8 @@ export default function FileInput({
   onLoadRun,
   selectedRunId,
   onSelectRun,
-  onRunsChange
+  onRunsChange,
+  onTryDemo
 }) {
   const [activeTab, setActiveTab] = useState('Dashboard')
   const {
@@ -81,7 +82,7 @@ export default function FileInput({
 
   const hasAnalysisError = error || analysisError
 
-  const tabs = ['Dashboard', 'Analysis', 'Dependencies', 'History']
+  const tabs = ['Dashboard','Runs']
 
   return (
   <div
@@ -184,7 +185,7 @@ export default function FileInput({
           </div>
         </header>
 
-        {activeTab === 'History' ? (
+        {activeTab === 'Runs' ? (
           <RunsSidebar
             runs={runs}
             runsLoading={runsLoading}
@@ -196,7 +197,7 @@ export default function FileInput({
             onSelectRun={handleLoadRun}
           />
         ) : (
-          <UploadCenter
+           <UploadCenter
             mode={mode}
             setMode={setMode}
             githubUrl={githubUrl}
@@ -209,6 +210,7 @@ export default function FileInput({
             analysisSuccess={analysisSuccess}
             onLocalFiles={(files) => handleLocalFiles(files, selectedProject)}
             onGithubFetch={() => handleGithubFetch(selectedProject)}
+            onTryDemo={onTryDemo}
           />
         )}
       </main>
