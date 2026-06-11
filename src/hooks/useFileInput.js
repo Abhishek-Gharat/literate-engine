@@ -116,10 +116,12 @@ export function useFileInput({
       setProjects(prev => [project, ...prev])
       if (onSelectProject) onSelectProject(project)
       setCreateSuccess(`Project "${newProjectName.trim()}" created successfully`)
+      // Close modal and clear form immediately
+      setShowCreateForm(false)
+      setNewProjectName('')
+      setNewProjectDesc('')
+      // Clear success message after timeout
       setTimeout(() => {
-        setShowCreateForm(false)
-        setNewProjectName('')
-        setNewProjectDesc('')
         setCreateSuccess('')
       }, TOAST_TIMEOUT)
     } catch (err) {
