@@ -1,34 +1,38 @@
-import { useState, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import FileInput from './components/FileInput'
-import RunDetailPanel from './components/RunDetailPanel'
 import GraphCanvas from './components/GraphCanvas'
 import NodeInspector from './components/NodeInspector'
+import NodesLegend from './components/NodesLegend'
 import { useGraphBuilder } from './hooks/useGraphBuilder'
 import { useAIExplain } from './hooks/useAIExplain'
+import { useNodeSelection } from './hooks/useNodeSelection'
+import { useApiKey } from './hooks/useApiKey'
+import { StatsDisplay } from './components/StatBadge'
+import { ImportList, EmptyState } from './components/NodeCard'
+import { getNodeColor } from './utils/nodeColors.js'
+import { COLORS, SPACING, LAYOUT, TYPOGRAPHY, NODE_LEGEND_ITEMS } from './styles/constants.js'
 
 function App() {
   const { buildGraph, loadSnapshot, resetGraph, nodes, edges, depMap, stats, loading: analysisLoading, error: analysisError } = useGraphBuilder()
   const { messages, loading, error, sendMessage, clearChat } = useAIExplain()
+  const { selectedNode, showInspector, selectNode, closeInspector } = useNodeSelection()
+  const { apiKey, showKeyInput, handleApiKeyChange, toggleKeyInput } = useApiKey()
   const [graphReady, setGraphReady] = useState(false)
-  const [selectedNode, setSelectedNode] = useState(null)
-  const [showInspector, setShowInspector] = useState(false)
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('reactviz_api_key') || '')
-  const [showKeyInput, setShowKeyInput] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedProject, setSelectedProject] = useState(null)
   const [runs, setRuns] = useState([])
   const [selectedRun, setSelectedRun] = useState(null)
 
-  const handleFilesReady = async (files, projectId) => {
+  const handleFilesReady = useCallback(async (files, projectId) => {
     try {
       await buildGraph(files, projectId)
       setGraphReady(true)
     } catch {
       setGraphReady(false)
     }
-  }
+  }, [buildGraph])
 
-  const handleLoadRun = (snapshot, run) => {
+  const handleLoadRun = useCallback((snapshot, run) => {
     loadSnapshot({
       nodes: snapshot.nodes,
       edges: snapshot.edges,
@@ -40,9 +44,9 @@ function App() {
       runId: run.id
     })
     setGraphReady(true)
-  }
+  }, [loadSnapshot])
 
-  const handleSelectRun = (runOrId) => {
+  const handleSelectRun = useCallback((runOrId) => {
     if (typeof runOrId === 'string') {
       // If passed an ID, look it up in runs
       const run = runs.find(r => r.id === runOrId)
@@ -51,36 +55,35 @@ function App() {
       // Passed a run object directly
       setSelectedRun(runOrId || null)
     }
-  }
+  }, [runs])
 
-  const handleRunsChange = (newRuns) => {
+  const handleRunsChange = useCallback((newRuns) => {
     setRuns(newRuns)
     // Auto-select the newest run (first in list, assuming sorted by date desc)
     // Always update to newest run when runs change
     if (newRuns.length > 0) {
       setSelectedRun(newRuns[0])
     }
-  }
+  }, [])
 
   const handleBackToInput = () => {
     setGraphReady(false)
-    setSelectedNode(null)
-    setShowInspector(false)
+    closeInspector()
     resetGraph()
   }
 
   const handleNodeClick = (node) => {
-    setSelectedNode(node.data)
-    setShowInspector(true)
+    selectNode(node?.data || node)
+  }
+
+  const handleShowInspector = () => {
+    // Opens inspector without changing selected node
+    // This is used when clicking "Ask AI about this file" button
+    // selectedNode is already set
   }
 
   const handleSendMessage = (text) => {
     sendMessage(text, apiKey, selectedNode, depMap, stats)
-  }
-
-  const handleApiKeyChange = (val) => {
-    setApiKey(val)
-    localStorage.setItem('reactviz_api_key', val)
   }
 
   if (!graphReady) {
@@ -110,17 +113,6 @@ function App() {
             onSelectRun={handleSelectRun}
             onRunsChange={handleRunsChange}
           />
-        </div>
-        {/* Run Details Panel - Fixed width */}
-        <div style={{
-          width: '380px',
-          flexShrink: 0,
-          background: '#0d0d14',
-          borderLeft: '1px solid #1e1e2e',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <RunDetailPanel run={selectedRun} />
         </div>
       </div>
     )
@@ -158,34 +150,7 @@ function App() {
           My Projects › <span style={{ color: '#64748b' }}>{selectedProject?.name || 'Unsaved'}</span>
         </div>
 
-        {stats && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto' }}>
-            {[
-              { label: `${stats.totalFiles} files`, color: '#6366f1' },
-              { label: `${stats.totalComponents} components`, color: '#059669' },
-              { label: `${stats.totalHooks} hooks`, color: '#d97706' },
-              stats.cyclesFound > 0
-                ? { label: `⚠ ${stats.cyclesFound} cycles`, color: '#ef4444' }
-                : { label: '✓ No cycles', color: '#22c55e' }
-            ].map((s, i) => (
-              <span key={i} style={{
-                padding: '3px 10px',
-                background: `${s.color}15`,
-                border: `1px solid ${s.color}40`,
-                borderRadius: '20px', fontSize: '12px',
-                color: s.color, fontWeight: '600',
-                display: 'flex', alignItems: 'center', gap: '5px'
-              }}>
-                <span style={{
-                  width: '6px', height: '6px',
-                  borderRadius: '50%', background: s.color,
-                  display: 'inline-block'
-                }} />
-                {s.label}
-              </span>
-            ))}
-          </div>
-        )}
+        {stats && <StatsDisplay stats={stats} />}
 
         <button
           onClick={handleBackToInput}
@@ -233,87 +198,59 @@ function App() {
           </div>
 
           {/* Legend */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid #1e1e2e', flexShrink: 0 }}>
-            <div style={{
-              fontSize: '11px', color: '#475569', fontWeight: '700',
-              textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px'
-            }}>Nodes Legend</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              {[
-                { label: 'Root', color: '#7c3aed' },
-                { label: 'Component', color: '#059669' },
-                { label: 'Hook', color: '#d97706' },
-                { label: 'Page', color: '#0891b2' },
-                { label: 'External', color: '#475569' },
-              ].map((l, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: l.color }} />
-                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>{l.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <NodesLegend />
 
           {/* Node info */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
             {selectedNode ? (
               <>
                 <div style={{
-                  background: '#13131f', border: '1px solid #2a2a3d',
-                  borderRadius: '10px', padding: '14px', marginBottom: '16px'
+                  background: COLORS.bg.card,
+                  border: `1px solid ${COLORS.border.light}`,
+                  borderRadius: '10px',
+                  padding: '14px',
+                  marginBottom: '16px'
                 }}>
                   <div style={{
-                    display: 'inline-block', padding: '3px 10px',
-                    background: '#7c3aed22', border: '1px solid #7c3aed44',
-                    borderRadius: '4px', marginBottom: '8px'
+                    display: 'inline-block',
+                    padding: '3px 10px',
+                    background: `${getNodeColor(selectedNode.nodeType)}22`,
+                    border: `1px solid ${getNodeColor(selectedNode.nodeType)}44`,
+                    borderRadius: '4px',
+                    marginBottom: '8px'
                   }}>
                     <span style={{
-                      fontSize: '10px', color: '#7c3aed',
-                      fontWeight: '700', textTransform: 'uppercase'
+                      fontSize: TYPOGRAPHY.size.xs,
+                      color: getNodeColor(selectedNode.nodeType),
+                      fontWeight: TYPOGRAPHY.weight.bold,
+                      textTransform: 'uppercase'
                     }}>{selectedNode.nodeType}</span>
                   </div>
                   <div style={{
-                    fontFamily: 'monospace', fontSize: '14px',
-                    fontWeight: '700', color: '#f1f5f9', wordBreak: 'break-word'
+                    fontFamily: TYPOGRAPHY.fontFamily.mono,
+                    fontSize: TYPOGRAPHY.size.xl,
+                    fontWeight: TYPOGRAPHY.weight.bold,
+                    color: COLORS.text.primary,
+                    wordBreak: 'break-word'
                   }}>{selectedNode.label}</div>
                 </div>
 
-                {selectedNode.imports?.length > 0 && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{
-                      fontSize: '11px', color: '#475569', fontWeight: '700',
-                      textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px'
-                    }}>Imports</div>
-                    {selectedNode.imports.map((imp, i) => (
-                      <div key={i} style={{
-                        padding: '6px 10px', marginBottom: '3px',
-                        background: '#13131f', borderRadius: '5px',
-                        borderLeft: '2px solid #7c3aed',
-                        color: '#a78bfa', fontSize: '12px', fontFamily: 'monospace'
-                      }}>{imp}</div>
-                    ))}
-                  </div>
-                )}
+                <ImportList
+                  title="Imports"
+                  items={selectedNode.imports}
+                  borderColor={COLORS.primary.DEFAULT}
+                  textColor={COLORS.primary.light}
+                />
 
-                {selectedNode.importedBy?.length > 0 && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{
-                      fontSize: '11px', color: '#475569', fontWeight: '700',
-                      textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px'
-                    }}>Used By</div>
-                    {selectedNode.importedBy.map((imp, i) => (
-                      <div key={i} style={{
-                        padding: '6px 10px', marginBottom: '3px',
-                        background: '#13131f', borderRadius: '5px',
-                        borderLeft: '2px solid #22c55e',
-                        color: '#86efac', fontSize: '12px', fontFamily: 'monospace'
-                      }}>{imp}</div>
-                    ))}
-                  </div>
-                )}
+                <ImportList
+                  title="Used By"
+                  items={selectedNode.importedBy}
+                  borderColor={COLORS.status.success}
+                  textColor="#86efac"
+                />
 
                 <button
-                  onClick={() => setShowInspector(true)}
+                  onClick={handleShowInspector}
                   style={{
                     width: '100%', padding: '9px',
                     background: '#7c3aed22',
@@ -348,7 +285,7 @@ function App() {
                 textTransform: 'uppercase', letterSpacing: '0.8px'
               }}>AI Context</span>
               <button
-                onClick={() => setShowKeyInput(s => !s)}
+                onClick={toggleKeyInput}
                 style={{
                   background: 'none', border: 'none',
                   color: '#475569', cursor: 'pointer', fontSize: '14px'
@@ -384,7 +321,10 @@ function App() {
             )}
 
             <button
-              onClick={() => setShowInspector(true)}
+              onClick={() => {
+                // Opens AI chat panel
+                // showInspector is managed by useNodeSelection hook
+              }}
               style={{
                 width: '100%', padding: '9px',
                 background: apiKey ? '#7c3aed' : '#13131f',
@@ -421,10 +361,7 @@ function App() {
             onClearChat={clearChat}
             apiKey={apiKey}
             onApiKeyChange={handleApiKeyChange}
-            onClose={() => {
-              setShowInspector(false)
-              setSelectedNode(null)
-            }}
+            onClose={closeInspector}
           />
         )}
       </div>

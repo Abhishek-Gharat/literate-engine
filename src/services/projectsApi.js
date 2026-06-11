@@ -1,12 +1,40 @@
 const API_BASE = import.meta.env.VITE_REACTVIZ_API_URL || ''
 const REQUEST_TIMEOUT = 10000 // 10 seconds
 
+// localStorage key for projects
+const PROJECTS_STORAGE_KEY = 'reactviz_local_projects'
+
 /**
  * Check if the backend API is available
  * For Vercel static hosting without a backend, this will be false
  */
 export function isBackendAvailable() {
-  return API_BASE !== '' || import.meta.env.DEV === true
+  // Backend is available only if VITE_REACTVIZ_API_URL is explicitly set
+  // DEV mode alone doesn't mean the backend is running
+  return API_BASE !== ''
+}
+
+/**
+ * Get all projects from localStorage
+ */
+function getLocalProjects() {
+  try {
+    const stored = localStorage.getItem(PROJECTS_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Save projects to localStorage
+ */
+function saveLocalProjects(projects) {
+  try {
+    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects))
+  } catch (error) {
+    console.error('[ProjectsAPI] Failed to save projects to localStorage:', error)
+  }
 }
 
 function fetchWithTimeout(url, options, timeout = REQUEST_TIMEOUT) {
@@ -18,7 +46,7 @@ function fetchWithTimeout(url, options, timeout = REQUEST_TIMEOUT) {
   ])
 }
 
-function handleApiError(error, defaultMessage) {
+function handleApiError(error) {
   if (error.name === 'TypeError' && error.message.includes('fetch')) {
     return new Error('Cannot connect to server. Please check if the backend is running.')
   }
@@ -29,17 +57,33 @@ function handleApiError(error, defaultMessage) {
 }
 
 export async function createProject(name, description = '') {
-  // If no backend configured, return a mock project for client-side only mode
+  // If no backend configured, store in localStorage
   if (!isBackendAvailable()) {
-    console.log('[ProjectsAPI] No backend available, using client-side mock project')
-    return {
-      id: 'local-' + Date.now(),
-      name: name.trim(),
+    console.log('[ProjectsAPI] No backend available, storing project in localStorage')
+
+    // Check for duplicate names
+    const existingProjects = getLocalProjects()
+    const trimmedName = name.trim()
+    if (existingProjects.some(p => p.name.toLowerCase() === trimmedName.toLowerCase())) {
+      const err = new Error('A project with this name already exists.')
+      err.code = 'DUPLICATE_PROJECT_NAME'
+      throw err
+    }
+
+    const now = new Date().toISOString()
+    const newProject = {
+      id: 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      name: trimmedName,
       description: description.trim() || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
+      runCount: 0,
       _local: true // Mark as local-only project
     }
+
+    existingProjects.push(newProject)
+    saveLocalProjects(existingProjects)
+    return newProject
   }
 
   try {
@@ -61,10 +105,12 @@ export async function createProject(name, description = '') {
 }
 
 export async function listProjects() {
-  // If no backend configured, return empty list for client-side only mode
+  // If no backend configured, use localStorage
   if (!isBackendAvailable()) {
-    console.log('[ProjectsAPI] No backend available, returning empty project list')
-    return []
+    console.log('[ProjectsAPI] No backend available, using localStorage')
+    const projects = getLocalProjects()
+    // Sort by updated_at descending
+    return projects.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
   }
 
   try {
@@ -83,16 +129,11 @@ export async function listProjects() {
 }
 
 export async function getProject(id) {
-  // If no backend configured and it's a local project, return mock
-  if (!isBackendAvailable() && id.startsWith('local-')) {
-    return {
-      id: id,
-      name: 'Local Project',
-      description: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      _local: true
-    }
+  // If no backend configured, use localStorage
+  if (!isBackendAvailable()) {
+    const projects = getLocalProjects()
+    const project = projects.find(p => p.id === id)
+    return project || null
   }
 
   try {
@@ -106,5 +147,32 @@ export async function getProject(id) {
     return response.json()
   } catch (error) {
     throw handleApiError(error, 'Failed to fetch project')
+  }
+}
+
+/**
+ * Update a project's run count - used when creating/deleting runs
+ */
+export function updateProjectRunCount(projectId, delta) {
+  if (isBackendAvailable()) return // Only for localStorage mode
+
+  const projects = getLocalProjects()
+  const project = projects.find(p => p.id === projectId)
+  if (project) {
+    project.runCount = Math.max(0, (project.runCount || 0) + delta)
+    project.updated_at = new Date().toISOString()
+    saveLocalProjects(projects)
+  }
+}
+
+/**
+ * Clear all local projects (for debugging/testing)
+ */
+export function clearLocalProjects() {
+  try {
+    localStorage.removeItem(PROJECTS_STORAGE_KEY)
+    console.log('[ProjectsAPI] Cleared all local projects')
+  } catch (error) {
+    console.error('[ProjectsAPI] Failed to clear local projects:', error)
   }
 }

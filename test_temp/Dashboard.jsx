@@ -1,5 +1,6 @@
 import StatsCard from './StatsCard.jsx';
 import ActivityList from './ActivityList.jsx';
+import Footer from './footer.jsx';
 
 export default function Dashboard() {
   return (
@@ -8,6 +9,7 @@ export default function Dashboard() {
       <StatsCard title="Users" value="128" />
       <StatsCard title="Revenue" value="$4500" />
       <ActivityList />
+      <Footer />
     </main>
   );
 }

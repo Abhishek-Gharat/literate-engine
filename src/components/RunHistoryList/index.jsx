@@ -1,20 +1,5 @@
 import React from 'react'
-
-/**
- * Format a date string for display
- * @param {string} dateStr - ISO date string
- * @returns {string} Formatted date string
- */
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return ''
-    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return ''
-  }
-}
+import { formatDate } from '../../utils/format.js'
 
 /**
  * RunHistoryItem - Individual run item component using semantic <li> and <button>
