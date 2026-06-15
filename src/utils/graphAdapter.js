@@ -1,6 +1,6 @@
 import dagre from 'dagre'
 import { isCyclicEdge } from './cycleDetector.js'
-import { getNodeType } from './nodeTypeClassifier.js'
+import { getNodeType, isEntryPoint } from './nodeTypeClassifier.js'
 
 const NODE_WIDTH = 200
 const NODE_HEIGHT = 70
@@ -49,7 +49,8 @@ function getLayoutedElements(nodes, edges, direction = 'TB') {
 function adaptApiNode(node, depMap) {
   const allFiles = Object.keys(depMap)
   const isGhost = Boolean(node.isGhost)
-  const nodeType = isGhost ? 'ghost' : (node.type || getNodeType(node.id))
+  const isEntry = isEntryPoint(node.id)
+  const nodeType = isGhost ? 'ghost' : (isEntry ? 'entry' : (node.type || getNodeType(node.id)))
 
   return {
     id: node.id,
@@ -59,6 +60,7 @@ function adaptApiNode(node, depMap) {
       label: node.id,
       nodeType,
       isGhost,
+      isEntryPoint: isEntry,
       imports: node.imports || depMap[node.id] || [],
       importedBy: node.importedBy || allFiles.filter((file) => depMap[file]?.includes(node.id)),
     },

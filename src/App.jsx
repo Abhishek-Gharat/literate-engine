@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import FileInput from './components/FileInput'
 import GraphCanvas from './components/GraphCanvas'
 import NodeInspector from './components/NodeInspector'
 import NodesLegend from './components/NodesLegend'
+import { IssuesPanel } from './components/IssuesPanel'
 import { useGraphBuilder } from './hooks/useGraphBuilder'
 import { useAIExplain } from './hooks/useAIExplain'
 import { useNodeSelection } from './hooks/useNodeSelection'
@@ -14,7 +15,7 @@ import { COLORS, SPACING, LAYOUT, TYPOGRAPHY, NODE_LEGEND_ITEMS } from './styles
 import { DemoExperience } from './demo/DemoExperience.jsx'
 
 function App() {
-  const { buildGraph, loadSnapshot, resetGraph, nodes, edges, depMap, stats, loading: analysisLoading, error: analysisError } = useGraphBuilder()
+  const { buildGraph, loadSnapshot, resetGraph, nodes, edges, cyclicEdges, depMap, stats, loading: analysisLoading, error: analysisError } = useGraphBuilder()
   const { messages, loading, error, sendMessage, clearChat } = useAIExplain()
   const { selectedNode, showInspector, selectNode, closeInspector } = useNodeSelection()
   const { apiKey, showKeyInput, handleApiKeyChange, toggleKeyInput } = useApiKey()
@@ -24,6 +25,10 @@ function App() {
   const [runs, setRuns] = useState([])
   const [selectedRun, setSelectedRun] = useState(null)
   const [demoMode, setDemoMode] = useState(false)
+  const [activeTab, setActiveTab] = useState('Dashboard')
+  const [issuesPanelOpen, setIssuesPanelOpen] = useState(false)
+  const [hasAutoOpenedIssues, setHasAutoOpenedIssues] = useState(false)
+  const graphCanvasRef = useRef(null)
 
   const handleFilesReady = useCallback(async (files, projectId) => {
     try {
@@ -69,6 +74,7 @@ function App() {
     setDemoMode(false)
     closeInspector()
     resetGraph()
+    // Keep activeTab as-is - if user was on Runs tab, they return there
   }
 
   const handleNodeClick = (node) => {
@@ -86,6 +92,22 @@ function App() {
   const handleTryDemo = () => {
     setDemoMode(true)
   }
+
+  // Auto-open issues panel on first load if there are issues
+  useEffect(() => {
+    if (graphReady && !hasAutoOpenedIssues && nodes.length > 0) {
+      const hasCircular = cyclicEdges?.length > 0
+      const hasOrphans = nodes.some(n =>
+        n.data &&
+        (!n.data.imports || n.data.imports.length === 0) &&
+        (!n.data.importedBy || n.data.importedBy.length === 0)
+      )
+      if (hasCircular || hasOrphans) {
+        setIssuesPanelOpen(true)
+        setHasAutoOpenedIssues(true)
+      }
+    }
+  }, [graphReady, nodes, cyclicEdges, hasAutoOpenedIssues])
 
   // Demo mode
   if (demoMode) {
@@ -118,6 +140,8 @@ function App() {
             onSelectRun={handleSelectRun}
             onRunsChange={handleRunsChange}
             onTryDemo={handleTryDemo}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
         </div>
       </div>
@@ -158,13 +182,82 @@ function App() {
 
         {stats && <StatsDisplay stats={stats} />}
 
+        {graphReady && (
+          <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto', alignItems: 'center' }}>
+            <span style={{ color: '#475569', fontSize: '12px', marginRight: '4px' }}>Export:</span>
+            <button
+              onClick={() => graphCanvasRef.current?.exportPNG()}
+              style={{
+                padding: '5px 10px', background: '#13131f',
+                border: '1px solid #2a2a3d', borderRadius: '6px',
+                color: '#94a3b8', cursor: 'pointer', fontSize: '11px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#7c3aed'
+                e.currentTarget.style.color = '#a78bfa'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = '#2a2a3d'
+                e.currentTarget.style.color = '#94a3b8'
+              }}
+              title="Export as PNG"
+            >
+              PNG
+            </button>
+            <button
+              onClick={() => graphCanvasRef.current?.exportSVG()}
+              style={{
+                padding: '5px 10px', background: '#13131f',
+                border: '1px solid #2a2a3d', borderRadius: '6px',
+                color: '#94a3b8', cursor: 'pointer', fontSize: '11px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#7c3aed'
+                e.currentTarget.style.color = '#a78bfa'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = '#2a2a3d'
+                e.currentTarget.style.color = '#94a3b8'
+              }}
+              title="Export as SVG"
+            >
+              SVG
+            </button>
+            <button
+              onClick={() => graphCanvasRef.current?.exportJSON()}
+              style={{
+                padding: '5px 10px', background: '#13131f',
+                border: '1px solid #2a2a3d', borderRadius: '6px',
+                color: '#94a3b8', cursor: 'pointer', fontSize: '11px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#7c3aed'
+                e.currentTarget.style.color = '#a78bfa'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = '#2a2a3d'
+                e.currentTarget.style.color = '#94a3b8'
+              }}
+              title="Export as JSON"
+            >
+              JSON
+            </button>
+          </div>
+        )}
+
         <button
           onClick={handleBackToInput}
           style={{
             padding: '6px 12px', background: 'transparent',
             border: '1px solid #1e1e2e', borderRadius: '7px',
             color: '#64748b', cursor: 'pointer', fontSize: '12px',
-            marginLeft: stats ? '0' : 'auto'
+            marginLeft: '8px'
           }}
         >← Back</button>
       </div>
@@ -344,10 +437,22 @@ function App() {
         {/* ── GRAPH CANVAS ── */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           <GraphCanvas
+            ref={graphCanvasRef}
             initialNodes={nodes}
             initialEdges={edges}
             onNodeClick={handleNodeClick}
             searchTerm={search}
+            stats={stats}
+            cyclicEdges={cyclicEdges}
+          />
+          <IssuesPanel
+            nodes={nodes}
+            edges={edges}
+            cyclicEdges={cyclicEdges}
+            stats={stats}
+            onNodeClick={handleNodeClick}
+            isOpen={issuesPanelOpen}
+            onToggle={() => setIssuesPanelOpen(!issuesPanelOpen)}
           />
         </div>
 

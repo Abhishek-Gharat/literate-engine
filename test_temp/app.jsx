@@ -1,14 +1,27 @@
-import Car from './car.jsx';
-import Dashboard from './Dashboard.jsx';
-import Sidebar from './Sidebar.jsx';
+import React from 'react'
+import { Header } from './components/Header'
+import { Sidebar } from './components/Sidebar'
+import { Home } from './pages/Home'
+import { useAuth } from './hooks/useAuth'
 
-export default function App() {
+function App() {
+  const { user, isLoading } = useAuth()
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
   return (
-    <div>
-      <h1>ReactViz Manual Test</h1>
-      <Sidebar />
-      <Dashboard />
-      <Car />
+    <div className="app">
+      <Header user={user} />
+      <div className="main-layout">
+        <Sidebar />
+        <main className="content">
+          <Home />
+        </main>
+      </div>
     </div>
-  );
+  )
 }
+
+export default App

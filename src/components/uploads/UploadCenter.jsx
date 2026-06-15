@@ -1,4 +1,5 @@
 import React, { useRef } from 'react'
+import { findEntryPoints } from '../../utils/nodeTypeClassifier'
 
 /**
  * UploadCenter - Center panel with upload controls
@@ -42,6 +43,11 @@ export default function UploadCenter({
   const statusColor = isAnalyzing ? '#fbbf24' : hasAnalysis ? '#52f0c5' : '#52f0c5'
   const statusBg = isAnalyzing ? '#451a03' : hasAnalysis ? '#123d45' : '#123d45'
   const statusBorder = isAnalyzing ? '#92400e' : hasAnalysis ? '#1d766f' : '#1d766f'
+
+  // Extract entry points from the latest run snapshot
+  const snapshotFiles = latestRun?.snapshot?.nodes?.map(n => n.id) || []
+  const entryPoints = findEntryPoints(snapshotFiles)
+  const hasEntryPoints = entryPoints.length > 0
 
   const handleFileChange = async (e) => {
     try {
@@ -412,7 +418,58 @@ export default function UploadCenter({
                   <span style={{ color: '#9aa4bd' }}>Total Files</span>
                   <strong style={{ color: '#52f0c5' }}>{filesAnalyzed}</strong>
                 </div>
+                {hasEntryPoints && (
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    gridColumn: '1 / -1',
+                    padding: '6px 0',
+                    marginTop: '4px',
+                    borderTop: '1px solid rgba(71, 85, 105, 0.3)'
+                  }}>
+                    <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>🚪</span> Entry Points
+                    </span>
+                    <strong style={{ color: '#fbbf24' }}>{entryPoints.length}</strong>
+                  </div>
+                )}
               </div>
+              {hasEntryPoints && (
+                <div style={{ marginTop: '10px' }}>
+                  <div style={{ 
+                    fontSize: '11px', 
+                    color: '#94a3b8', 
+                    marginBottom: '4px',
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace'
+                  }}>
+                    Detected:
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {entryPoints.slice(0, 3).map((file, i) => (
+                      <span key={i} style={{
+                        fontSize: '11px',
+                        color: '#fbbf24',
+                        background: 'rgba(245, 158, 11, 0.15)',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        fontFamily: 'monospace'
+                      }}>
+                        {file.split('/').pop()}
+                      </span>
+                    ))}
+                    {entryPoints.length > 3 && (
+                      <span style={{
+                        fontSize: '11px',
+                        color: '#64748b',
+                        padding: '2px 8px'
+                      }}>
+                        +{entryPoints.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

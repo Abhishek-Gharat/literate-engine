@@ -9,6 +9,7 @@ import { COLORS } from '../styles/constants.js'
 export function getNodeColor(nodeType) {
   const colors = {
     root: COLORS.node.root,
+    entry: '#f59e0b', // Amber/gold for entry points
     component: COLORS.node.component,
     hook: COLORS.node.hook,
     page: COLORS.node.page,
@@ -17,4 +18,13 @@ export function getNodeColor(nodeType) {
     index: COLORS.node.index,
   }
   return colors[nodeType] || COLORS.status.info
+}
+
+/**
+ * Check if a node type is an entry point
+ * @param {string} nodeType - The node type
+ * @returns {boolean}
+ */
+export function isEntryPointType(nodeType) {
+  return nodeType === 'entry' || nodeType === 'root'
 }

@@ -169,6 +169,7 @@ export const TRANSITIONS = {
 
 export const NODE_TYPE_CONFIG = {
   root: { icon: '⚡', color: COLORS.node.root, label: 'Root' },
+  entry: { icon: '🚪', color: '#f59e0b', label: 'Entry Point' },
   page: { icon: '📄', color: COLORS.node.page, label: 'Page' },
   component: { icon: '🧩', color: COLORS.node.component, label: 'Component' },
   hook: { icon: '🪝', color: COLORS.node.hook, label: 'Hook' },
@@ -226,6 +227,7 @@ export const commonStyles = {
 
 export const NODE_LEGEND_ITEMS = [
   { label: 'Root', color: COLORS.node.root },
+  { label: 'Entry Point', color: '#f59e0b' },
   { label: 'Component', color: COLORS.node.component },
   { label: 'Hook', color: COLORS.node.hook },
   { label: 'Page', color: COLORS.node.page },

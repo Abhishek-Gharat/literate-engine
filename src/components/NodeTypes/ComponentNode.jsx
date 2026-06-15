@@ -2,6 +2,7 @@ import { Handle, Position } from '@xyflow/react'
 
 const TYPE_CONFIG = {
   root:      { icon: '⚡', color: '#7c3aed', label: 'Root' },
+  entry:     { icon: '🚪', color: '#f59e0b', label: 'Entry Point' },
   page:      { icon: '📄', color: '#0891b2', label: 'Page' },
   component: { icon: '🧩', color: '#059669', label: 'Component' },
   hook:      { icon: '🪝', color: '#d97706', label: 'Hook' },

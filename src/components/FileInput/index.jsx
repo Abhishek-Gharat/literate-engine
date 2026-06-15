@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import ProjectsSidebar from '../projects/ProjectsSidebar'
 import UploadCenter from '../uploads/UploadCenter'
 import RunsSidebar from '../runs/RunsSidebar'
+import RunComparisonPanel from '../runs/RunComparisonPanel'
 import CreateProjectModal from '../modals/CreateProjectModal'
 import { useFileInput } from '../../hooks/useFileInput'
 
@@ -19,6 +20,8 @@ import { useFileInput } from '../../hooks/useFileInput'
  * @param {string|null} props.selectedRunId - Currently selected run ID
  * @param {Function} props.onSelectRun - Callback when run is selected
  * @param {Function} props.onRunsChange - Callback when runs change
+ * @param {string} props.activeTab - Currently active tab
+ * @param {Function} props.onTabChange - Callback when tab changes
  */
 export default function FileInput({
   onFilesReady,
@@ -30,9 +33,10 @@ export default function FileInput({
   selectedRunId,
   onSelectRun,
   onRunsChange,
-  onTryDemo
+  onTryDemo,
+  activeTab,
+  onTabChange
 }) {
-  const [activeTab, setActiveTab] = useState('Dashboard')
   const {
     mode,
     setMode,
@@ -72,13 +76,25 @@ export default function FileInput({
     analyzing
   })
 
-  // Load runs when project changes - use the ID string to avoid infinite loops
+    // Load runs when project changes - use the ID string to avoid infinite loops
   const selectedProjectId = selectedProject?.id
   useEffect(() => {
     if (selectedProjectId) {
       loadRuns(selectedProjectId)
     }
   }, [selectedProjectId, loadRuns])
+
+  // Find the currently selected run object
+  const selectedRun = runs.find(r => r.id === selectedRunId)
+
+  // Wrap handleLoadRun to ensure tab context is preserved
+  const handleSelectRunWithContext = useCallback((runOrId) => {
+    // Ensure we're on Runs tab when loading a run (for back navigation context)
+    if (activeTab !== 'Runs') {
+      onTabChange('Runs')
+    }
+    handleLoadRun(runOrId)
+  }, [handleLoadRun, activeTab, onTabChange])
 
   const hasAnalysisError = error || analysisError
 
@@ -138,7 +154,7 @@ export default function FileInput({
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => onTabChange(tab)}
                 style={{
                   position: 'relative',
                   padding: '0',
@@ -186,16 +202,37 @@ export default function FileInput({
         </header>
 
         {activeTab === 'Runs' ? (
-          <RunsSidebar
-            runs={runs}
-            runsLoading={runsLoading}
-            runsError={runsError}
-            selectedProject={selectedProject}
-            selectedRunId={selectedRunId}
-            isAnalyzing={isAnalyzing}
-            onRetry={() => selectedProject && loadRuns(selectedProject.id)}
-            onSelectRun={handleLoadRun}
-          />
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden'
+          }}>
+            <div style={{ flexShrink: 0 }}>
+              <RunComparisonPanel
+                runs={runs}
+                currentRun={selectedRun}
+                selectedProject={selectedProject}
+              />
+            </div>
+            <div style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto'
+            }}>
+              <RunsSidebar
+                runs={runs}
+                runsLoading={runsLoading}
+                runsError={runsError}
+                selectedProject={selectedProject}
+                selectedRunId={selectedRunId}
+                isAnalyzing={isAnalyzing}
+                onRetry={() => selectedProject && loadRuns(selectedProject.id)}
+                onSelectRun={handleSelectRunWithContext}
+              />
+            </div>
+          </div>
         ) : (
            <UploadCenter
             mode={mode}

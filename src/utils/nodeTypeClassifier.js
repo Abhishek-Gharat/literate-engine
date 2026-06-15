@@ -1,3 +1,36 @@
+/**
+ * Common entry point file patterns
+ * These files typically serve as application entry points
+ */
+const ENTRY_PATTERNS = [
+  /^main\.(jsx?|tsx?)$/,
+  /^index\.(jsx?|tsx?)$/,
+  /^App\.(jsx?|tsx?)$/,
+  /^entry\.(jsx?|tsx?)$/,
+  /^bootstrap\.(jsx?|tsx?)$/,
+  /^client\.(jsx?|tsx?)$/,
+  /^server\.(jsx?|tsx?)$/,
+]
+
+/**
+ * Check if a file is likely an entry point
+ * @param {string} filename - The file path or name
+ * @returns {boolean}
+ */
+export function isEntryPoint(filename) {
+  const basename = filename.split('/').pop()
+  return ENTRY_PATTERNS.some(pattern => pattern.test(basename))
+}
+
+/**
+ * Get all entry points from a list of files
+ * @param {string[]} files - Array of file paths
+ * @returns {string[]} Array of entry point file paths
+ */
+export function findEntryPoints(files) {
+  return files.filter(isEntryPoint)
+}
+
 export function getNodeType(filename) {
   const basename = filename.split('/').pop()
 
@@ -10,4 +43,21 @@ export function getNodeType(filename) {
   if (basename === 'App.jsx' || basename === 'App.tsx') return 'root'
   if (basename?.includes('index')) return 'index'
   return 'component'
+}
+
+/**
+ * Get node type with entry point awareness
+ * @param {string} filename - The file path
+ * @param {boolean} markAsEntry - Whether to mark entry points specially
+ * @returns {object} Object with nodeType and isEntryPoint
+ */
+export function getNodeTypeWithEntry(filename, markAsEntry = false) {
+  const nodeType = getNodeType(filename)
+  const entryPoint = isEntryPoint(filename)
+
+  if (markAsEntry && entryPoint) {
+    return { nodeType: 'entry', isEntryPoint: true }
+  }
+
+  return { nodeType, isEntryPoint: entryPoint }
 }
