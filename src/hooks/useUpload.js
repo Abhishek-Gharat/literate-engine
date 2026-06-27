@@ -107,17 +107,23 @@ export function useUpload({ onFilesReady, onSuccess } = {}) {
         throw new Error('No JS/JSX files found in this repository')
       }
 
-      const fileData = await Promise.all(
+      const fileResults = await Promise.allSettled(
         jsFiles.slice(0, 80).map(async (f) => {
           const res = await fetch(
             `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`
           )
-          if (!res.ok) throw new Error(`Failed to fetch file: ${f.path}`)
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
           const content = await res.text()
           const name = f.path.split('/').pop()
           return { name, content, fullPath: f.path }
         })
       )
+      const fileData = fileResults
+        .filter(r => r.status === 'fulfilled')
+        .map(r => r.value)
+      const failedCount = fileResults.filter(r => r.status === 'rejected').length
+      if (fileData.length === 0) throw new Error('Failed to fetch any files from the repository')
+      if (failedCount > 0) console.warn(`Skipped ${failedCount} files that could not be fetched`)
 
       setFileCount(fileData.length)
       setLastAnalyzedFiles(fileData)
