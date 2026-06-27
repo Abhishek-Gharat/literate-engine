@@ -64,7 +64,7 @@ export function useUpload({ onFilesReady, onSuccess } = {}) {
 
     setLoading(true)
     try {
-      const match = url.match(/github\.com\/([^/]+)\/([^/]+)/)
+      const match = url.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/)
       if (!match) {
         throw new Error('Invalid GitHub URL format. Use: https://github.com/owner/repo')
       }
@@ -74,7 +74,16 @@ export function useUpload({ onFilesReady, onSuccess } = {}) {
       const treeRes = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`
       )
-      if (!treeRes.ok) throw new Error('Repository not found or is private')
+      if (treeRes.status === 403 || treeRes.status === 429) {
+        const body = await treeRes.json().catch(() => ({}))
+        throw new Error(body.message || 'GitHub API rate limit reached. Try again later.')
+      }
+      if (treeRes.status === 404) throw new Error('Repository not found')
+      if (treeRes.status === 422) throw new Error('Repository is empty')
+      if (!treeRes.ok) {
+        const body = await treeRes.json().catch(() => ({}))
+        throw new Error(body.message || 'Repository not found or is private')
+      }
 
       const treeData = await treeRes.json()
       const jsFiles = treeData.tree.filter(f =>
