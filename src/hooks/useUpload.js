@@ -71,8 +71,18 @@ export function useUpload({ onFilesReady, onSuccess } = {}) {
 
       const [, owner, repo] = match
 
+      // First, get the default branch
+      const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
+      if (repoRes.status === 403 || repoRes.status === 429) {
+        const body = await repoRes.json().catch(() => ({}))
+        throw new Error(body.message || 'GitHub API rate limit reached. Try again later.')
+      }
+      if (repoRes.status === 404) throw new Error('Repository not found')
+      const repoData = await repoRes.json()
+      const branch = repoData.default_branch
+
       const treeRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
       )
       if (treeRes.status === 403 || treeRes.status === 429) {
         const body = await treeRes.json().catch(() => ({}))
@@ -100,7 +110,7 @@ export function useUpload({ onFilesReady, onSuccess } = {}) {
       const fileData = await Promise.all(
         jsFiles.slice(0, 80).map(async (f) => {
           const res = await fetch(
-            `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${f.path}`
+            `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`
           )
           if (!res.ok) throw new Error(`Failed to fetch file: ${f.path}`)
           const content = await res.text()

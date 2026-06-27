@@ -186,16 +186,25 @@ export function useFileInput({
       if (!match) throw new Error('Invalid GitHub URL format')
 
       const [, owner, repo] = match
+
+      // First, get the default branch
+      const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
+      if (repoRes.status === 403 || repoRes.status === 429) {
+        const body = await repoRes.json().catch(() => ({}))
+        throw new Error(body.message || 'GitHub API rate limit reached. Try again later.')
+      }
+      if (repoRes.status === 404) throw new Error('Repository not found')
+      const repoData = await repoRes.json()
+      const branch = repoData.default_branch
+
       const treeRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
       )
       if (treeRes.status === 403 || treeRes.status === 429) {
         const body = await treeRes.json().catch(() => ({}))
         throw new Error(body.message || 'GitHub API rate limit reached. Try again later or use local files.')
       }
-      if (treeRes.status === 404) throw new Error('Repository not found')
       if (treeRes.status === 422) throw new Error('Repository is empty')
-
       if (!treeRes.ok) {
         const body = await treeRes.json().catch(() => ({}))
         throw new Error(body.message || 'Repository not found or is private')
@@ -213,7 +222,7 @@ export function useFileInput({
       const fileData = await Promise.all(
         jsFiles.slice(0, 80).map(async (f) => {
           const res = await fetch(
-            `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${f.path}`
+            `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`
           )
           const content = await res.text()
           return { name: f.path.split('/').pop(), content, fullPath: f.path }
