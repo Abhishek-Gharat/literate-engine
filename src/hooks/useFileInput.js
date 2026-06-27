@@ -221,10 +221,18 @@ export function useFileInput({
 
       const fileResults = await Promise.allSettled(
         jsFiles.slice(0, 80).map(async (f) => {
-          const res = await fetch(
-            `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`
-          )
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`
+          // Retry once on failure to handle transient CDN errors
+          let res
+          for (let attempt = 0; attempt < 2; attempt++) {
+            res = await fetch(url)
+            if (res.ok) break
+            if (attempt === 0) await new Promise(r => setTimeout(r, 1000))
+          }
+          if (!res.ok) {
+            const body = await res.text().catch(() => '')
+            throw new Error(`HTTP ${res.status}: ${body.slice(0, 100)}`)
+          }
           const content = await res.text()
           return { name: f.path.split('/').pop(), content, fullPath: f.path }
         })
