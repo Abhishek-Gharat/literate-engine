@@ -1,16 +1,20 @@
 const API_BASE = import.meta.env.VITE_REACTVIZ_API_URL || ''
-const REQUEST_TIMEOUT = 10000 // 10 seconds
+
+// Render free tier can take up to 50s to wake up from sleep
+// Use a longer timeout for initial startup requests
+const REQUEST_TIMEOUT = 60000
+const LONG_TIMEOUT = 15000
 
 // localStorage key for projects
 const PROJECTS_STORAGE_KEY = 'reactviz_local_projects'
 
+// Flag to track whether we've successfully hit the backend once
+let hasHadSuccessfulBackendCall = false
+
 /**
  * Check if the backend API is available
- * For Vercel static hosting without a backend, this will be false
  */
 export function isBackendAvailable() {
-  // Backend is available only if VITE_REACTVIZ_API_URL is explicitly set
-  // DEV mode alone doesn't mean the backend is running
   return API_BASE !== ''
 }
 
@@ -38,12 +42,25 @@ function saveLocalProjects(projects) {
 }
 
 function fetchWithTimeout(url, options, timeout = REQUEST_TIMEOUT) {
-  return Promise.race([
-    fetch(url, options),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timed out')), timeout)
-    )
-  ])
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  const opts = {
+    ...options,
+    signal: options?.signal ? options.signal : controller.signal,
+  }
+
+  if (!opts.signal || opts.signal === controller.signal) {
+    opts.signal = controller.signal
+  }
+
+  return fetch(url, opts).finally(() => clearTimeout(timeoutId))
+}
+
+function timeoutPromise(timeout) {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Request timed out')), timeout)
+  )
 }
 
 function handleApiError(error) {
@@ -53,15 +70,56 @@ function handleApiError(error) {
   if (error.message === 'Request timed out') {
     return new Error('Request timed out. Please try again.')
   }
+  if (error.name === 'AbortError') {
+    return new Error('Request timed out. Please try again.')
+  }
   return error
 }
 
-export async function createProject(name, description = '') {
-  // If no backend configured, store in localStorage
-  if (!isBackendAvailable()) {
-    console.log('[ProjectsAPI] No backend available, storing project in localStorage')
+// Try a request with fallback to a longer timeout for Render cold starts
+async function fetchWithColdStartFallback(url, options = {}) {
+  const { timeout, retries, ...fetchOptions } = options
+  const activeTimeout = timeout || (hasHadSuccessfulBackendCall ? REQUEST_TIMEOUT : 20000)
+  const controller = new AbortController()
 
-    // Check for duplicate names
+  const timeoutId = setTimeout(() => controller.abort(), activeTimeout)
+
+  try {
+    const response = await fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    hasHadSuccessfulBackendCall = true
+    return response
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') {
+      // For the first request, retry once with a longer timeout
+      if (!hasHadSuccessfulBackendCall) {
+        const retryController = new AbortController()
+        const retryTimeout = setTimeout(() => retryController.abort(), 60000)
+        try {
+          const response = await fetch(url, {
+            ...fetchOptions,
+            signal: retryController.signal,
+          })
+          clearTimeout(retryTimeout)
+          hasHadSuccessfulBackendCall = true
+          return response
+        } catch {
+          clearTimeout(retryTimeout)
+          throw new Error('Request timed out. Please try again.')
+        }
+      }
+      throw new Error('Request timed out. Please try again.')
+    }
+    throw error
+  }
+}
+
+export async function createProject(name, description = '') {
+  if (!isBackendAvailable()) {
     const existingProjects = getLocalProjects()
     const trimmedName = name.trim()
     if (existingProjects.some(p => p.name.toLowerCase() === trimmedName.toLowerCase())) {
@@ -78,7 +136,7 @@ export async function createProject(name, description = '') {
       created_at: now,
       updated_at: now,
       runCount: 0,
-      _local: true // Mark as local-only project
+      _local: true
     }
 
     existingProjects.push(newProject)
@@ -87,7 +145,7 @@ export async function createProject(name, description = '') {
   }
 
   try {
-    const response = await fetchWithTimeout(`${API_BASE}/api/projects`, {
+    const response = await fetchWithColdStartFallback(`${API_BASE}/api/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name.trim(), description: description.trim() || null }),
@@ -100,21 +158,18 @@ export async function createProject(name, description = '') {
 
     return response.json()
   } catch (error) {
-    throw handleApiError(error, 'Failed to create project')
+    throw handleApiError(error)
   }
 }
 
 export async function listProjects() {
-  // If no backend configured, use localStorage
   if (!isBackendAvailable()) {
-    console.log('[ProjectsAPI] No backend available, using localStorage')
     const projects = getLocalProjects()
-    // Sort by updated_at descending
     return projects.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
   }
 
   try {
-    const response = await fetchWithTimeout(`${API_BASE}/api/projects`)
+    const response = await fetchWithColdStartFallback(`${API_BASE}/api/projects`)
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }))
@@ -124,12 +179,11 @@ export async function listProjects() {
     const data = await response.json()
     return data.projects || []
   } catch (error) {
-    throw handleApiError(error, 'Failed to fetch projects')
+    throw handleApiError(error)
   }
 }
 
 export async function getProject(id) {
-  // If no backend configured, use localStorage
   if (!isBackendAvailable()) {
     const projects = getLocalProjects()
     const project = projects.find(p => p.id === id)
@@ -137,7 +191,7 @@ export async function getProject(id) {
   }
 
   try {
-    const response = await fetchWithTimeout(`${API_BASE}/api/projects/${id}`)
+    const response = await fetchWithColdStartFallback(`${API_BASE}/api/projects/${id}`)
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }))
@@ -146,7 +200,7 @@ export async function getProject(id) {
 
     return response.json()
   } catch (error) {
-    throw handleApiError(error, 'Failed to fetch project')
+    throw handleApiError(error)
   }
 }
 
@@ -154,7 +208,7 @@ export async function getProject(id) {
  * Update a project's run count - used when creating/deleting runs
  */
 export function updateProjectRunCount(projectId, delta) {
-  if (isBackendAvailable()) return // Only for localStorage mode
+  if (isBackendAvailable()) return
 
   const projects = getLocalProjects()
   const project = projects.find(p => p.id === projectId)
