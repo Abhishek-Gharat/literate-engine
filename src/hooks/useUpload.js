@@ -109,19 +109,32 @@ export function useUpload({ onFilesReady, onSuccess } = {}) {
 
       const fileResults = await Promise.allSettled(
         jsFiles.slice(0, 80).map(async (f) => {
-          const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`
-          // Retry once on failure to handle transient CDN errors
-          let res
+          const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`
+          const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${f.path}?ref=${branch}`
+
+          let content
+          let ok = false
           for (let attempt = 0; attempt < 2; attempt++) {
-            res = await fetch(url)
-            if (res.ok) break
-            if (attempt === 0) await new Promise(r => setTimeout(r, 1000))
+            const res = await fetch(attempt === 0 ? rawUrl : apiUrl, {
+              ...(attempt === 1 ? { headers: { Accept: 'application/vnd.github.v3+json' } } : {}),
+            })
+            if (res.ok) {
+              if (attempt === 0) {
+                content = await res.text()
+              } else {
+                const json = await res.json()
+                content = atob(json.content.replace(/\s/g, ''))
+              }
+              ok = true
+              break
+            }
+            if (attempt === 0) {
+              const body = await res.text().catch(() => '')
+              console.warn(`raw.githubusercontent.com failed (${res.status}: ${body.slice(0, 50)}), trying Contents API...`)
+            }
           }
-          if (!res.ok) {
-            const body = await res.text().catch(() => '')
-            throw new Error(`HTTP ${res.status}: ${body.slice(0, 100)}`)
-          }
-          const content = await res.text()
+
+          if (!ok) throw new Error(`Failed to fetch: ${f.path}`)
           const name = f.path.split('/').pop()
           return { name, content, fullPath: f.path }
         })
