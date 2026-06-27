@@ -219,15 +219,25 @@ export function useFileInput({
 
       if (jsFiles.length === 0) throw new Error('No JS/JSX files found')
 
-      // Use GitHub Contents API directly (more reliable than raw.githubusercontent.com)
+      // Try raw.githubusercontent.com first (no rate limit), fallback to Contents API
       const fileResults = await Promise.allSettled(
         jsFiles.slice(0, 80).map(async (f) => {
+          const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`
           const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${f.path}?ref=${branch}`
-          const res = await fetch(apiUrl, {
+
+          // Try raw first (no rate limit)
+          const rawRes = await fetch(rawUrl)
+          if (rawRes.ok) {
+            const content = await rawRes.text()
+            return { name: f.path.split('/').pop(), content, fullPath: f.path }
+          }
+
+          // Fallback to Contents API (has rate limit)
+          const apiRes = await fetch(apiUrl, {
             headers: { Accept: 'application/vnd.github.v3+json' },
           })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const json = await res.json()
+          if (!apiRes.ok) throw new Error(`HTTP ${apiRes.status}`)
+          const json = await apiRes.json()
           const content = atob(json.content.replace(/\s/g, ''))
           return { name: f.path.split('/').pop(), content, fullPath: f.path }
         })
