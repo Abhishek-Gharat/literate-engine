@@ -4,8 +4,8 @@
  * Dependency-free so both the server (analysis engine) and the client can use it.
  */
 
-const GOD_FAN_IN_THRESHOLD = 8
-const GOD_FAN_OUT_THRESHOLD = 15
+export const GOD_FAN_IN_THRESHOLD = 8
+export const GOD_FAN_OUT_THRESHOLD = 15
 export const MAX_SCORE = 100
 
 /**

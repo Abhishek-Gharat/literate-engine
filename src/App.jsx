@@ -12,6 +12,9 @@ import { StatsDisplay } from './components/StatBadge'
 import { ImportList, EmptyState } from './components/NodeCard'
 import { getNodeColor } from './utils/nodeColors.js'
 import { computeBlastRadius } from './utils/impactAnalysis.js'
+import { buildReviewDigest } from './utils/reviewBuilder.js'
+import { useArchReview } from './hooks/useArchReview.js'
+import ReviewModal from './components/review/ReviewModal.jsx'
 import { COLORS, SPACING, LAYOUT, TYPOGRAPHY, NODE_LEGEND_ITEMS } from './styles/constants.js'
 import { DemoExperience } from './demo/DemoExperience.jsx'
 
@@ -20,6 +23,7 @@ function App() {
   const { messages, loading, error, sendMessage, clearChat } = useAIExplain()
   const { selectedNode, selectNode, closeInspector } = useNodeSelection()
   const { apiKey, showKeyInput, handleApiKeyChange, toggleKeyInput } = useApiKey()
+  const review = useArchReview()
   const [graphReady, setGraphReady] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedProject, setSelectedProject] = useState(null)
@@ -31,6 +35,7 @@ function App() {
   const [hasAutoOpenedIssues, setHasAutoOpenedIssues] = useState(false)
   const [sidebarTab, setSidebarTab] = useState('info')
   const [showImpact, setShowImpact] = useState(false)
+  const [showReview, setShowReview] = useState(false)
   const graphCanvasRef = useRef(null)
 
   const handleFilesReady = useCallback(async (files, projectId) => {
@@ -105,6 +110,22 @@ function App() {
 
   const handleTryDemo = () => {
     setDemoMode(true)
+  }
+
+  const generateCurrentReview = () => {
+    review.generateReview(apiKey, buildReviewDigest({
+      nodes,
+      cyclicEdges,
+      unresolvedImports: stats?.unresolvedImports ?? 0,
+      stats
+    }))
+  }
+
+  const handleOpenReview = () => {
+    setShowReview(true)
+    if (apiKey && !review.report && !review.loading && !review.error) {
+      generateCurrentReview()
+    }
   }
 
   // Auto-open issues panel on first load if there are issues.
@@ -201,6 +222,29 @@ function App() {
 
         {graphReady && (
           <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto', alignItems: 'center' }}>
+            <button
+              onClick={handleOpenReview}
+              data-testid="ai-review-button"
+              style={{
+                padding: '5px 12px', background: 'linear-gradient(135deg, #2a2a2a, #1a1a1a)',
+                border: '1px solid rgba(255,255,255,0.18)', borderRadius: '6px',
+                color: '#e2e2e2', cursor: 'pointer', fontSize: '11px',
+                fontWeight: '700',
+                transition: 'all 0.2s',
+                marginRight: '6px'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#ffffff'
+                e.currentTarget.style.color = '#ffffff'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'
+                e.currentTarget.style.color = '#e2e2e2'
+              }}
+              title="One-click AI architecture review"
+            >
+              ✦ AI Review
+            </button>
             <span style={{ color: '#6b6b6b', fontSize: '12px', marginRight: '4px' }}>Export:</span>
             <button
               onClick={() => graphCanvasRef.current?.exportPNG()}
@@ -533,6 +577,19 @@ function App() {
             </div>
           )}
         </div>
+
+        {/* ── AI REVIEW MODAL ── */}
+        {showReview && (
+          <ReviewModal
+            apiKey={apiKey}
+            onApiKeyChange={handleApiKeyChange}
+            report={review.report}
+            loading={review.loading}
+            error={review.error}
+            onGenerate={generateCurrentReview}
+            onClose={() => setShowReview(false)}
+          />
+        )}
 
         {/* ── FLOATING AI ASSISTANT ── */}
         <NodeInspector
