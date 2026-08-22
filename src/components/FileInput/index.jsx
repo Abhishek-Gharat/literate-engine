@@ -1,9 +1,11 @@
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect, useCallback, useState } from 'react'
 import ProjectsSidebar from '../projects/ProjectsSidebar'
 import UploadCenter from '../uploads/UploadCenter'
 import RunsSidebar from '../runs/RunsSidebar'
 import RunComparisonPanel from '../runs/RunComparisonPanel'
 import CreateProjectModal from '../modals/CreateProjectModal'
+import ComponentsModal from '../modals/ComponentsModal'
+import SettingsModal from '../modals/SettingsModal'
 import { useFileInput } from '../../hooks/useFileInput'
 
 /**
@@ -98,6 +100,12 @@ export default function FileInput({
 
   const hasAnalysisError = error || analysisError
 
+  const [systemPanel, setSystemPanel] = useState(null) // 'components' | 'settings' | null
+  const latestRun = runs[0] || null
+  const latestNodes = latestRun?.snapshot?.nodes || []
+  const openComponentsPanel = useCallback(() => setSystemPanel('components'), [])
+  const openSettingsPanel = useCallback(() => setSystemPanel('settings'), [])
+
   const tabs = ['Dashboard','Runs']
 
   return (
@@ -123,6 +131,9 @@ export default function FileInput({
         onSelectProject={onSelectProject}
         onCreateClick={openCreateForm}
         onRetry={loadProjects}
+        onOpenComponents={openComponentsPanel}
+        onOpenGraphs={() => onTabChange('Runs')}
+        onOpenSettings={openSettingsPanel}
       />
 
       <main style={{
@@ -184,20 +195,48 @@ export default function FileInput({
             marginLeft: 'auto',
             display: 'flex',
             alignItems: 'center',
-            gap: '20px',
-            color: '#ededed',
-            fontSize: '24px'
+            gap: '14px'
           }}>
-            <span>♢</span>
-            <span>⚙</span>
+            <button
+              type="button"
+              onClick={openComponentsPanel}
+              data-testid="header-components-button"
+              title="Component library"
+              style={{
+                background: 'transparent', border: 'none',
+                color: '#ededed', fontSize: '20px',
+                cursor: 'pointer', lineHeight: 1,
+                padding: '4px 6px', borderRadius: '6px'
+              }}
+            >♢</button>
+            <button
+              type="button"
+              onClick={openSettingsPanel}
+              data-testid="header-settings-button"
+              title="Settings"
+              style={{
+                background: 'transparent', border: 'none',
+                color: '#ededed', fontSize: '20px',
+                cursor: 'pointer', lineHeight: 1,
+                padding: '4px 6px', borderRadius: '6px'
+              }}
+            >⚙</button>
             <div style={{
               width: '40px',
               height: '40px',
               border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '10px',
               background: '#111111',
-              boxShadow: 'none'
-            }} />
+              boxShadow: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ffffff',
+              fontWeight: '800',
+              fontSize: '16px'
+            }} title={selectedProject?.name || 'No project selected'}>
+              {selectedProject?.name ? selectedProject.name.charAt(0).toUpperCase() : '·'}
+            </div>
           </div>
         </header>
 
@@ -263,6 +302,18 @@ export default function FileInput({
         onDescriptionChange={setNewProjectDesc}
         onClose={closeCreateForm}
         onSubmit={createProjectHandler}
+      />
+
+      <ComponentsModal
+        isOpen={systemPanel === 'components'}
+        nodes={latestNodes}
+        projectName={selectedProject?.name || null}
+        onClose={() => setSystemPanel(null)}
+      />
+
+      <SettingsModal
+        isOpen={systemPanel === 'settings'}
+        onClose={() => setSystemPanel(null)}
       />
     </div>
   )

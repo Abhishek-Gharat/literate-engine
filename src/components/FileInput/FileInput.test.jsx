@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import FileInput from './index'
 
@@ -298,6 +298,92 @@ describe('FileInput Component', () => {
     await waitFor(() => {
       expect(mockOnLoadRun).toHaveBeenCalledWith(mockRun.snapshot, mockRun)
     })
+  })
+
+  test('system sidebar buttons open their panels', async () => {
+    listProjects.mockResolvedValue([])
+    const onTabChange = vi.fn()
+
+    render(
+      <FileInput
+        onFilesReady={mockOnFilesReady}
+        onSelectProject={mockOnSelectProject}
+        onLoadRun={mockOnLoadRun}
+        selectedProject={null}
+        activeTab="Dashboard"
+        onTabChange={onTabChange}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading projects...')).not.toBeInTheDocument()
+    })
+
+    // Components opens the library modal (empty state without a run)
+    await userEvent.click(screen.getByTestId('system-components'))
+    expect(screen.getByTestId('components-modal')).toBeInTheDocument()
+    expect(screen.getByText(/Run an analysis to populate/i)).toBeInTheDocument()
+    await userEvent.click(screen.getByTestId('components-modal-close'))
+    expect(screen.queryByTestId('components-modal')).not.toBeInTheDocument()
+
+    // Graphs navigates to the Runs tab
+    await userEvent.click(screen.getByTestId('system-graphs'))
+    expect(onTabChange).toHaveBeenCalledWith('Runs')
+
+    // Settings opens the settings modal with API key section + repo link
+    await userEvent.click(screen.getByTestId('header-settings-button'))
+    expect(screen.getByTestId('settings-modal')).toBeInTheDocument()
+    expect(screen.getByText(/OpenRouter API Key/i)).toBeInTheDocument()
+    expect(screen.getByTestId('settings-repo-link')).toHaveAttribute(
+      'href',
+      'https://github.com/Abhishek-Gharat/literate-engine'
+    )
+  })
+
+  test('documentation link points at the repository', async () => {
+    listProjects.mockResolvedValue([])
+    renderFileInput({ selectedProject: null })
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading projects...')).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId('documentation-link')).toHaveAttribute(
+      'href',
+      'https://github.com/Abhishek-Gharat/literate-engine#readme'
+    )
+  })
+
+  test('component library lists latest run files grouped by type', async () => {
+    const mockProject = { id: '1', name: 'Test Project', runCount: 1 }
+    listProjects.mockResolvedValue([mockProject])
+    listRuns.mockResolvedValue([
+      {
+        id: 'run-1',
+        createdAt: new Date().toISOString(),
+        stats: { totalFiles: 3, totalComponents: 2 },
+        snapshot: {
+          nodes: [
+            { id: 'src/App.jsx', type: 'component', isGhost: false, imports: ['./lib.js'], importedBy: [] },
+            { id: 'src/lib.js', type: 'component', isGhost: false, imports: [], importedBy: ['src/App.jsx'] },
+            { id: 'src/useThing.js', type: 'hook', isGhost: false, imports: [], importedBy: [] },
+          ],
+          edges: [],
+        },
+      },
+    ])
+
+    renderFileInput({ selectedProject: mockProject, activeTab: 'Dashboard' })
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('run-history-loading')).not.toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByTestId('system-components'))
+
+    const modal = screen.getByTestId('components-modal')
+    expect(modal).toBeInTheDocument()
+    expect(within(modal).getByText('src/useThing.js')).toBeInTheDocument()
+    expect(within(modal).getByText('Hooks')).toBeInTheDocument()
   })
 
   test('shows runs error with retry button', async () => {

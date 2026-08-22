@@ -11,7 +11,10 @@ export default function ProjectsSidebar({
   isAnalyzing,
   onSelectProject,
   onCreateClick,
-  onRetry
+  onRetry,
+  onOpenComponents,
+  onOpenGraphs,
+  onOpenSettings
 }) {
   return (
     <aside style={{
@@ -218,23 +221,38 @@ export default function ProjectsSidebar({
           textTransform: 'uppercase'
         }}>System</div>
 
-        {['Components', 'Graphs', 'Settings'].map((item) => (
-          <div
-            key={item}
+        {[
+          { key: 'components', icon: '▣', label: 'Components', onClick: onOpenComponents },
+          { key: 'graphs', icon: '▦', label: 'Graphs', onClick: onOpenGraphs },
+          { key: 'settings', icon: '⚙', label: 'Settings', onClick: onOpenSettings },
+        ].map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={item.onClick}
+            data-testid={`system-${item.key}`}
             style={{
               height: '44px',
+              width: '100%',
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
               color: '#a1a1a1',
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               fontSize: '15px',
-              letterSpacing: '1.2px'
+              letterSpacing: '1.2px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'color 0.15s'
             }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ffffff' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#a1a1a1' }}
           >
-            <span style={{ width: '26px', textAlign: 'center', color: '#a1a1a1' }}>□</span>
-            {item}
-          </div>
+            <span style={{ width: '26px', textAlign: 'center', color: '#a1a1a1' }}>{item.icon}</span>
+            {item.label}
+          </button>
         ))}
       </div>
 
@@ -259,12 +277,22 @@ export default function ProjectsSidebar({
             textAlign: 'left'
           }}
         >↻ {projectsLoading ? 'Loading...' : 'Refresh'}</button>
-        <div style={{
-          color: '#a1a1a1',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-          fontSize: '16px',
-          letterSpacing: '1.4px'
-        }}>▤ Documentation</div>
+        <a
+          href="https://github.com/Abhishek-Gharat/literate-engine#readme"
+          target="_blank"
+          rel="noreferrer"
+          data-testid="documentation-link"
+          style={{
+            color: '#a1a1a1',
+            textDecoration: 'none',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            fontSize: '16px',
+            letterSpacing: '1.4px',
+            transition: 'color 0.15s'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#ffffff' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#a1a1a1' }}
+        >▤ Documentation ↗</a>
       </div>
     </aside>
   )
