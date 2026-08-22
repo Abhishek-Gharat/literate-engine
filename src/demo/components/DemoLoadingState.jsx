@@ -184,12 +184,6 @@ export function DemoLoadingState({ onComplete, onCancel }) {
 }
 
 function StepItem({ step, index, isCompleted, isActive }) {
-  const [showSpinner, setShowSpinner] = useState(isActive)
-  
-  useEffect(() => {
-    setShowSpinner(isActive)
-  }, [isActive])
-
   const containerStyle = {
     display: 'flex',
     alignItems: 'center',

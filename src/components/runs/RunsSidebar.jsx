@@ -46,7 +46,7 @@ export default function RunHistoryList({
 }) {
   if (loading) {
     return (
-      <div style={{ padding: '14px' }}>
+      <div data-testid="run-history-loading" style={{ padding: '14px' }}>
         {[1, 2, 3].map((item) => (
           <div
             key={item}
@@ -82,6 +82,7 @@ export default function RunHistoryList({
   if (error) {
     return (
       <div
+        data-testid="run-history-error"
         style={{
           margin: '14px',
           padding: '18px',
@@ -112,6 +113,7 @@ export default function RunHistoryList({
         </div>
         <button
           onClick={onRetry}
+          data-testid="run-history-retry-button"
           style={{
             padding: '8px 12px',
             borderRadius: '8px',
@@ -132,6 +134,7 @@ export default function RunHistoryList({
   if (!runs.length) {
     return (
       <div
+        data-testid="run-history-empty"
         style={{
           margin: '14px',
           padding: '28px 18px',
@@ -177,6 +180,7 @@ export default function RunHistoryList({
           <button
             key={run.id}
             onClick={() => onSelectRun?.(run)}
+            data-testid={`run-item-${run.id}`}
             style={{
               width: '100%',
               textAlign: 'left',

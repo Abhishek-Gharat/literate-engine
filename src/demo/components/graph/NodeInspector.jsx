@@ -17,13 +17,12 @@ const NODE_TYPE_CONFIG = {
   root: { icon: '⚡', label: 'Entry', color: '#6366f1' }
 }
 
-export function NodeInspector({ 
-  node, 
+export function NodeInspector({
+  node,
   onClose,
   onViewCode,
   onTracePath,
-  onAskAI,
-  onShowDependencies
+  onAskAI
 }) {
   if (!node) {
     return (

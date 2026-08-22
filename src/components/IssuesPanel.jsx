@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import React from 'react'
 
-export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isOpen, onToggle }) {
+export function IssuesPanel({ nodes, cyclicEdges, onNodeClick, isOpen, onToggle }) {
   // Calculate issues from real data
   const orphanFiles = nodes.filter(n => 
     n.data && 
@@ -46,10 +46,10 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
           alignItems: 'center',
           gap: '8px',
           padding: '10px 16px',
-          background: '#0d0d14',
-          border: '1px solid #1e1e2e',
+          background: '#111111',
+          border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: '8px',
-          color: '#f1f5f9',
+          color: '#f5f5f5',
           fontSize: '13px',
           fontWeight: '600',
           cursor: 'pointer',
@@ -58,12 +58,12 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
           transition: 'all 0.2s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = '#7c3aed'
-          e.currentTarget.style.background = '#13131f'
+          e.currentTarget.style.borderColor = '#e2e2e2'
+          e.currentTarget.style.background = '#1a1a1a'
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = '#1e1e2e'
-          e.currentTarget.style.background = '#0d0d14'
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+          e.currentTarget.style.background = '#111111'
         }}
       >
         <span style={{ fontSize: '14px' }}>⚠️</span>
@@ -71,7 +71,7 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
         {totalIssues > 0 && (
           <span style={{
             padding: '2px 8px',
-            background: circularCount > 0 ? '#ef4444' : '#f59e0b',
+            background: circularCount > 0 ? '#b07a8a' : '#b0b0b0',
             borderRadius: '12px',
             fontSize: '11px',
             fontWeight: '600',
@@ -90,8 +90,8 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
       top: '16px',
       right: '16px',
       width: '280px',
-      background: '#0d0d14',
-      border: '1px solid #1e1e2e',
+      background: '#111111',
+      border: '1px solid rgba(255,255,255,0.12)',
       borderRadius: '10px',
       padding: '16px',
       zIndex: 10,
@@ -103,25 +103,25 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
         gap: '8px',
         marginBottom: '16px',
         paddingBottom: '12px',
-        borderBottom: '1px solid #1e1e2e',
+        borderBottom: '1px solid rgba(255,255,255,0.12)',
       }}>
         <span style={{ fontSize: '16px' }}>⚠️</span>
         <span style={{ 
           fontSize: '14px', 
-          fontWeight: '700', 
-          color: '#f1f5f9',
+          fontWeight: '600', 
+          color: '#f5f5f5',
         }}>Architecture Issues</span>
         {totalIssues > 0 && (
           <span style={{
             marginLeft: 'auto',
             marginRight: '8px',
             padding: '2px 8px',
-            background: circularCount > 0 ? '#ef444422' : '#f59e0b22',
-            border: `1px solid ${circularCount > 0 ? '#ef4444' : '#f59e0b'}`,
+            background: circularCount > 0 ? '#b07a8a22' : '#b0b0b022',
+            border: `1px solid ${circularCount > 0 ? '#b07a8a' : '#b0b0b0'}`,
             borderRadius: '12px',
             fontSize: '11px',
             fontWeight: '600',
-            color: circularCount > 0 ? '#ef4444' : '#f59e0b',
+            color: circularCount > 0 ? '#b07a8a' : '#b0b0b0',
           }}>
             {totalIssues}
           </span>
@@ -137,18 +137,18 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             background: 'transparent',
             border: 'none',
             borderRadius: '4px',
-            color: '#64748b',
+            color: '#6b6b6b',
             fontSize: '16px',
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#1e1e2e'
-            e.currentTarget.style.color = '#f1f5f9'
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+            e.currentTarget.style.color = '#f5f5f5'
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = '#64748b'
+            e.currentTarget.style.color = '#6b6b6b'
           }}
           title="Close panel"
         >
@@ -165,8 +165,8 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             gap: '6px',
             marginBottom: '8px',
           }}>
-            <span style={{ fontSize: '12px', color: '#ef4444' }}>🔄</span>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#ef4444' }}>
+            <span style={{ fontSize: '12px', color: '#b07a8a' }}>🔄</span>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#b07a8a' }}>
               Circular Dependencies ({circularCount})
             </span>
           </div>
@@ -174,22 +174,22 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             {cyclicEdges.slice(0, 3).map((edge, i) => (
               <div key={i} style={{
                 padding: '8px 10px',
-                background: '#13131f',
+                background: '#1a1a1a',
                 borderRadius: '6px',
                 fontSize: '11px',
-                color: '#94a3b8',
-                fontFamily: 'monospace',
+                color: '#a0a0a0',
+                fontFamily: "'JetBrains Mono', monospace",
                 cursor: 'pointer',
               }} onClick={() => onNodeClick?.({ data: { label: edge.source } })}>
-                <span style={{ color: '#ef4444' }}>{edge.source}</span>
+                <span style={{ color: '#b07a8a' }}>{edge.source}</span>
                 <span style={{ margin: '0 4px' }}>↔</span>
-                <span style={{ color: '#ef4444' }}>{edge.target}</span>
+                <span style={{ color: '#b07a8a' }}>{edge.target}</span>
               </div>
             ))}
             {circularCount > 3 && (
               <div style={{
                 fontSize: '11px',
-                color: '#64748b',
+                color: '#6b6b6b',
                 textAlign: 'center',
                 padding: '4px',
               }}>
@@ -209,8 +209,8 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             gap: '6px',
             marginBottom: '8px',
           }}>
-            <span style={{ fontSize: '12px', color: '#f59e0b' }}>👻</span>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#f59e0b' }}>
+            <span style={{ fontSize: '12px', color: '#b0b0b0' }}>👻</span>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#b0b0b0' }}>
               Unreferenced Files ({orphanCount})
             </span>
           </div>
@@ -218,11 +218,11 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             {orphanFiles.slice(0, 3).map((node, i) => (
               <div key={i} style={{
                 padding: '6px 10px',
-                background: '#13131f',
+                background: '#1a1a1a',
                 borderRadius: '6px',
                 fontSize: '11px',
-                color: '#94a3b8',
-                fontFamily: 'monospace',
+                color: '#a0a0a0',
+                fontFamily: "'JetBrains Mono', monospace",
                 cursor: 'pointer',
               }} onClick={() => onNodeClick?.(node)}>
                 {node.data?.label || node.id}
@@ -231,7 +231,7 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             {orphanCount > 3 && (
               <div style={{
                 fontSize: '11px',
-                color: '#64748b',
+                color: '#6b6b6b',
                 textAlign: 'center',
                 padding: '4px',
               }}>
@@ -251,23 +251,23 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             gap: '6px',
             marginBottom: '8px',
           }}>
-            <span style={{ fontSize: '12px', color: '#818cf8' }}>🔗</span>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#818cf8' }}>
+            <span style={{ fontSize: '12px', color: '#8b6fb0' }}>🔗</span>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#8b6fb0' }}>
               Most Connected
             </span>
           </div>
           <div style={{
             padding: '10px',
-            background: '#13131f',
+            background: '#1a1a1a',
             borderRadius: '6px',
-            border: '1px solid #1e1e2e',
+            border: '1px solid rgba(255,255,255,0.12)',
             cursor: 'pointer',
           }} onClick={() => onNodeClick?.(mostConnected)}>
             <div style={{
               fontSize: '12px',
               fontWeight: '600',
-              color: '#f1f5f9',
-              fontFamily: 'monospace',
+              color: '#f5f5f5',
+              fontFamily: "'JetBrains Mono', monospace",
               marginBottom: '4px',
               wordBreak: 'break-word',
             }}>
@@ -277,7 +277,7 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
               display: 'flex',
               gap: '12px',
               fontSize: '11px',
-              color: '#64748b',
+              color: '#6b6b6b',
             }}>
               <span>↓ {(mostConnected.data?.imports?.length || 0)} imports</span>
               <span>↑ {(mostConnected.data?.importedBy?.length || 0)} used by</span>
@@ -295,23 +295,23 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             gap: '6px',
             marginBottom: '8px',
           }}>
-            <span style={{ fontSize: '12px', color: '#f472b6' }}>🔧</span>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#f472b6' }}>
+            <span style={{ fontSize: '12px', color: '#b0b0b0' }}>🔧</span>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#b0b0b0' }}>
               Refactor Target
             </span>
           </div>
           <div style={{
             padding: '10px',
-            background: '#13131f',
+            background: '#1a1a1a',
             borderRadius: '6px',
-            border: '1px solid #1e1e2e',
+            border: '1px solid rgba(255,255,255,0.12)',
             cursor: 'pointer',
           }} onClick={() => onNodeClick?.(topRefactorTarget)}>
             <div style={{
               fontSize: '12px',
               fontWeight: '600',
-              color: '#f1f5f9',
-              fontFamily: 'monospace',
+              color: '#f5f5f5',
+              fontFamily: "'JetBrains Mono', monospace",
               marginBottom: '6px',
               wordBreak: 'break-word',
             }}>
@@ -319,7 +319,7 @@ export function IssuesPanel({ nodes, edges, cyclicEdges, stats, onNodeClick, isO
             </div>
             <div style={{
               fontSize: '11px',
-              color: '#64748b',
+              color: '#6b6b6b',
               lineHeight: '1.5',
             }}>
               Used by {(topRefactorTarget.data?.importedBy?.length || 0)} components

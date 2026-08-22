@@ -14,10 +14,10 @@ export default function ApiKeyInput({ apiKey, showKey, onKeyChange, onShowKeyTog
         style={{
           flex: 1,
           padding: '7px 10px',
-          background: '#13131f',
-          border: `1px solid ${apiKey ? '#7c3aed44' : '#1e1e2e'}`,
+          background: '#1a1a1a',
+          border: `1px solid ${apiKey ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)'}`,
           borderRadius: '8px',
-          color: '#f1f5f9',
+          color: '#f5f5f5',
           fontSize: '11px',
           outline: 'none'
         }}
@@ -27,7 +27,7 @@ export default function ApiKeyInput({ apiKey, showKey, onKeyChange, onShowKeyTog
         style={{
           background: 'none',
           border: 'none',
-          color: '#475569',
+          color: '#6b6b6b',
           cursor: 'pointer',
           fontSize: '13px'
         }}

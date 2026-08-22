@@ -1,30 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import ChatTab from '../inspector/ChatTab'
 import InfoTab from '../inspector/InfoTab'
+import ApiKeyInput from '../inspector/ApiKeyInput'
 
 const TYPE_COLORS = {
-  root: '#7c3aed',
-  component: '#059669',
-  hook: '#d97706',
-  page: '#0891b2',
-  ghost: '#475569'
+  root: '#e2e2e2',
+  component: '#5a9e6f',
+  hook: '#b07a8a',
+  page: '#4a7c9b',
+  ghost: '#8a8a8a'
 }
 
-/**
- * NodeInspector - Right panel for node inspection and AI chat
- * Refactored into smaller sub-components
- * 
- * @param {Object} props
- * @param {Object} props.node - Selected node data
- * @param {Array} props.messages - Chat messages
- * @param {boolean} props.loading - AI loading state
- * @param {string} props.error - Error message
- * @param {string} props.apiKey - API key
- * @param {Function} props.onSendMessage - Send message handler
- * @param {Function} props.onClearChat - Clear chat handler
- * @param {Function} props.onApiKeyChange - API key change handler
- * @param {Function} props.onClose - Close panel handler
- */
 export default function NodeInspector({
   node,
   messages,
@@ -39,13 +25,22 @@ export default function NodeInspector({
   const [input, setInput] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [tab, setTab] = useState('chat')
+  const [collapsed, setCollapsed] = useState(true)
+  const [lastNode, setLastNode] = useState(null)
   const bottomRef = useRef(null)
 
-  const color = node ? (TYPE_COLORS[node.nodeType] || '#7c3aed') : '#7c3aed'
+  const color = node ? (TYPE_COLORS[node.nodeType] || '#e2e2e2') : '#e2e2e2'
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Expand the panel when a new node is selected (render-time adjustment
+  // instead of an effect, to avoid cascading renders)
+  if (node !== lastNode) {
+    setLastNode(node)
+    if (node) setCollapsed(false)
+  }
 
   const handleSend = (text) => {
     const msg = text || input.trim()
@@ -59,22 +54,81 @@ export default function NodeInspector({
     handleSend(text)
   }
 
+  const handleClose = () => {
+    setCollapsed(true)
+    onClose()
+  }
+
+  // ── COLLAPSED PILL ──
+  if (collapsed) {
+    return (
+      <div style={{
+        position: 'fixed',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+      }}>
+        <button
+          onClick={() => setCollapsed(false)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            background: '#111111',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '999px',
+            color: '#f5f5f5',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            transition: 'all 0.2s',
+            fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#e2e2e266'; e.currentTarget.style.background = '#1a1a1a' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.background = '#111111' }}
+        >
+          <span style={{
+            width: '20px', height: '20px',
+            background: 'linear-gradient(135deg, #e2e2e2, #b0b0b0)',
+            borderRadius: '5px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '11px'
+          }}>✦</span>
+          Ask AI
+        </button>
+      </div>
+    )
+  }
+
+  // ── EXPANDED FLOATING PANEL ──
   return (
     <div style={{
-      width: '320px',
-      flexShrink: 0,
-      background: '#0d0d14',
-      borderLeft: '1px solid #1e1e2e',
+      position: 'fixed',
+      bottom: '20px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      maxWidth: '420px',
+      width: 'calc(100% - 40px)',
+      zIndex: 1000,
+      background: '#111111',
+      border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: '16px',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden',
-      height: '100%'
+      maxHeight: '60vh',
+      overflow: 'hidden'
     }}>
       {/* Header */}
       <div style={{
-        height: '48px',
+        height: '44px',
         flexShrink: 0,
-        borderBottom: '1px solid #1e1e2e',
+        borderBottom: '1px solid rgba(255,255,255,0.12)',
         padding: '0 16px',
         display: 'flex',
         alignItems: 'center',
@@ -82,18 +136,26 @@ export default function NodeInspector({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
-            width: '24px',
-            height: '24px',
-            background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+            width: '22px', height: '22px',
+            background: 'linear-gradient(135deg, #e2e2e2, #b0b0b0)',
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '12px'
+            fontSize: '11px'
           }}>✦</div>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: '#f1f5f9' }}>
+          <span style={{ fontSize: '13px', fontWeight: '600', color: '#f5f5f5' }}>
             AI Assistant
           </span>
+          <button
+            onClick={() => setShowKey(s => !s)}
+            style={{
+              background: 'none', border: 'none',
+              color: '#6b6b6b', cursor: 'pointer', fontSize: '11px',
+              padding: '2px 6px'
+            }}
+            title="API Key"
+          >🔑</button>
         </div>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           {messages.length > 0 && (
@@ -101,34 +163,41 @@ export default function NodeInspector({
               onClick={onClearChat}
               title="Clear chat"
               style={{
-                background: 'none',
-                border: 'none',
-                color: '#475569',
-                cursor: 'pointer',
-                fontSize: '13px'
+                background: 'none', border: 'none',
+                color: '#6b6b6b', cursor: 'pointer', fontSize: '13px'
               }}
-              onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-              onMouseLeave={e => e.currentTarget.style.color = '#475569'}
+              onMouseEnter={e => e.currentTarget.style.color = '#b07a8a'}
+              onMouseLeave={e => e.currentTarget.style.color = '#6b6b6b'}
             >🗑</button>
           )}
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
-              background: 'none',
-              border: 'none',
-              color: '#475569',
-              cursor: 'pointer',
-              fontSize: '20px'
+              background: 'none', border: 'none',
+              color: '#6b6b6b', cursor: 'pointer', fontSize: '20px',
+              lineHeight: '1'
             }}
           >×</button>
         </div>
       </div>
 
+      {/* API Key (expandable) */}
+      {showKey && (
+        <div style={{ padding: '8px 16px', borderBottom: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }}>
+          <ApiKeyInput
+            apiKey={apiKey}
+            showKey={true}
+            onKeyChange={onApiKeyChange}
+            onShowKeyToggle={() => setShowKey(s => !s)}
+          />
+        </div>
+      )}
+
       {/* Node Context Chip */}
       {node && (
         <div style={{
           padding: '8px 16px',
-          borderBottom: '1px solid #1e1e2e',
+          borderBottom: '1px solid rgba(255,255,255,0.12)',
           flexShrink: 0
         }}>
           <div style={{
@@ -141,22 +210,17 @@ export default function NodeInspector({
             borderRadius: '20px'
           }}>
             <div style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: color,
+              width: '6px', height: '6px',
+              borderRadius: '50%', background: color,
               flexShrink: 0
             }} />
             <code style={{
-              fontSize: '12px',
-              color: color,
-              fontFamily: 'monospace',
-              flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              fontSize: '12px', color: color,
+              fontFamily: "'JetBrains Mono', monospace", flex: 1,
+              overflow: 'hidden', textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
             }}>{node.label}</code>
-            <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>
+            <span style={{ fontSize: '10px', color: '#6b6b6b', flexShrink: 0 }}>
               {node.imports?.length || 0}↓ {node.importedBy?.length || 0}↑
             </span>
           </div>
@@ -166,7 +230,7 @@ export default function NodeInspector({
       {/* Tabs */}
       <div style={{
         display: 'flex',
-        borderBottom: '1px solid #1e1e2e',
+        borderBottom: '1px solid rgba(255,255,255,0.12)',
         flexShrink: 0
       }}>
         {['chat', 'info'].map(t => (
@@ -175,13 +239,13 @@ export default function NodeInspector({
             onClick={() => setTab(t)}
             style={{
               flex: 1,
-              padding: '10px',
+              padding: '8px',
               background: 'none',
               border: 'none',
-              borderBottom: `2px solid ${tab === t ? '#7c3aed' : 'transparent'}`,
-              color: tab === t ? '#a78bfa' : '#475569',
+              borderBottom: `2px solid ${tab === t ? '#e2e2e2' : 'transparent'}`,
+              color: tab === t ? '#ffffff' : '#6b6b6b',
               cursor: 'pointer',
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: tab === t ? '600' : '400',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
@@ -192,21 +256,17 @@ export default function NodeInspector({
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '0' }}>
         {tab === 'chat' ? (
           <ChatTab
             messages={messages}
             loading={loading}
             error={error}
             input={input}
-            showKey={showKey}
-            apiKey={apiKey}
             hasNode={Boolean(node)}
             onInputChange={setInput}
             onSend={() => handleSend()}
             onClear={onClearChat}
-            onKeyChange={onApiKeyChange}
-            onShowKeyToggle={() => setShowKey(s => !s)}
             onQuickSend={handleQuickSend}
           />
         ) : (

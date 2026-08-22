@@ -1,13 +1,13 @@
 import { Handle, Position } from '@xyflow/react'
 
 const TYPE_CONFIG = {
-  root:      { icon: '⚡', color: '#7c3aed', label: 'Root' },
-  entry:     { icon: '🚪', color: '#f59e0b', label: 'Entry Point' },
-  page:      { icon: '📄', color: '#0891b2', label: 'Page' },
-  component: { icon: '🧩', color: '#059669', label: 'Component' },
-  hook:      { icon: '🪝', color: '#d97706', label: 'Hook' },
-  index:     { icon: '📦', color: '#6366f1', label: 'Index' },
-  ghost:     { icon: '👻', color: '#475569', label: 'External' },
+  root:      { icon: '⚡', color: '#e2e2e2', label: 'Root' },
+  entry:     { icon: '🚪', color: '#4a7c9b', label: 'Entry Point' },
+  page:      { icon: '📄', color: '#4a7c9b', label: 'Page' },
+  component: { icon: '🧩', color: '#5a9e6f', label: 'Component' },
+  hook:      { icon: '🪝', color: '#b07a8a', label: 'Hook' },
+  index:     { icon: '📦', color: '#8b6fb0', label: 'Index' },
+  ghost:     { icon: '👻', color: '#8a8a8a', label: 'External' },
 }
 
 export default function ComponentNode({ data, selected }) {
@@ -17,12 +17,12 @@ export default function ComponentNode({ data, selected }) {
 
   return (
     <div style={{
-      background: selected ? '#13131f' : '#13131f',
-      border: `1px solid ${selected ? config.color : '#2a2a3d'}`,
+      background: selected ? '#1a1a1a' : '#1a1a1a',
+      border: `1px solid ${selected ? config.color : 'rgba(255,255,255,0.12)'}`,
       borderRadius: '10px',
       minWidth: '170px',
       maxWidth: '200px',
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily: "'Inter', system-ui, sans-serif",
       boxShadow: selected
         ? `0 0 0 1px ${config.color}, 0 8px 32px ${config.color}33`
         : '0 2px 8px #00000066',
@@ -48,7 +48,7 @@ export default function ComponentNode({ data, selected }) {
         display: 'flex',
         alignItems: 'center',
         gap: '5px',
-        borderBottom: `1px solid #1e1e2e`,
+        borderBottom: `1px solid rgba(255,255,255,0.12)`,
       }}>
         <span style={{ fontSize: '11px' }}>{config.icon}</span>
         <span style={{
@@ -62,8 +62,8 @@ export default function ComponentNode({ data, selected }) {
           <span style={{
             marginLeft: 'auto',
             fontSize: '9px',
-            color: '#475569',
-            background: '#1e293b',
+            color: '#6b6b6b',
+            background: 'rgba(255,255,255,0.08)',
             padding: '1px 5px',
             borderRadius: '4px'
           }}>external</span>
@@ -73,10 +73,10 @@ export default function ComponentNode({ data, selected }) {
 {/* Filename */}
 <div style={{
   padding: '8px 10px 6px',
-  color: '#f1f5f9',
-  fontWeight: '700',
+  color: '#f5f5f5',
+  fontWeight: '500',
   fontSize: '13px',
-  fontFamily: 'monospace',
+  fontFamily: "'JetBrains Mono', monospace",
   wordBreak: 'break-word',
   lineHeight: '1.4',
   letterSpacing: '0.2px'
@@ -93,7 +93,7 @@ export default function ComponentNode({ data, selected }) {
 }}>
   <span style={{
     fontSize: '11px',
-    color: importCount > 0 ? '#818cf8' : '#334155',
+    color: importCount > 0 ? '#8b6fb0' : 'rgba(255,255,255,0.2)',
     display: 'flex', alignItems: 'center', gap: '4px',
     fontWeight: '500'
   }}>
@@ -101,7 +101,7 @@ export default function ComponentNode({ data, selected }) {
   </span>
   <span style={{
     fontSize: '11px',
-    color: usedByCount > 0 ? '#34d399' : '#334155',
+    color: usedByCount > 0 ? '#5a9e6f' : 'rgba(255,255,255,0.2)',
     display: 'flex', alignItems: 'center', gap: '4px',
     fontWeight: '500'
   }}>

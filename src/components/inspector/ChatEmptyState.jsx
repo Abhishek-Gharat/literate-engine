@@ -26,7 +26,7 @@ export default function ChatEmptyState({ hasNode, onQuickSend }) {
     }}>
       <div style={{ fontSize: '28px' }}>🧠</div>
       <div style={{
-        color: '#64748b',
+        color: '#a1a1a1',
         fontSize: '13px',
         textAlign: 'center',
         lineHeight: '1.6'
@@ -44,10 +44,10 @@ export default function ChatEmptyState({ hasNode, onQuickSend }) {
             onClick={() => onQuickSend(chip)}
             style={{
               padding: '9px 12px',
-              background: '#13131f',
-              border: '1px solid #1e1e2e',
+              background: '#1a1a1a',
+              border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '8px',
-              color: '#94a3b8',
+              color: '#a1a1a1',
               cursor: 'pointer',
               fontSize: '12px',
               textAlign: 'left',
@@ -55,14 +55,14 @@ export default function ChatEmptyState({ hasNode, onQuickSend }) {
               transition: 'all 0.15s'
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#7c3aed44'
-              e.currentTarget.style.color = '#c4b5fd'
-              e.currentTarget.style.background = '#7c3aed11'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
+              e.currentTarget.style.color = '#ffffff'
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = '#1e1e2e'
-              e.currentTarget.style.color = '#94a3b8'
-              e.currentTarget.style.background = '#13131f'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+              e.currentTarget.style.color = '#a1a1a1'
+              e.currentTarget.style.background = '#1a1a1a'
             }}
           >{chip}</button>
         ))}

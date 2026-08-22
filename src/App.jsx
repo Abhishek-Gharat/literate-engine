@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import FileInput from './components/FileInput'
 import GraphCanvas from './components/GraphCanvas'
 import NodeInspector from './components/NodeInspector'
@@ -17,7 +17,7 @@ import { DemoExperience } from './demo/DemoExperience.jsx'
 function App() {
   const { buildGraph, loadSnapshot, resetGraph, nodes, edges, cyclicEdges, depMap, stats, loading: analysisLoading, error: analysisError } = useGraphBuilder()
   const { messages, loading, error, sendMessage, clearChat } = useAIExplain()
-  const { selectedNode, showInspector, selectNode, closeInspector } = useNodeSelection()
+  const { selectedNode, selectNode, closeInspector } = useNodeSelection()
   const { apiKey, showKeyInput, handleApiKeyChange, toggleKeyInput } = useApiKey()
   const [graphReady, setGraphReady] = useState(false)
   const [search, setSearch] = useState('')
@@ -28,6 +28,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('Dashboard')
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false)
   const [hasAutoOpenedIssues, setHasAutoOpenedIssues] = useState(false)
+  const [sidebarTab, setSidebarTab] = useState('info')
   const graphCanvasRef = useRef(null)
 
   const handleFilesReady = useCallback(async (files, projectId) => {
@@ -93,21 +94,24 @@ function App() {
     setDemoMode(true)
   }
 
-  // Auto-open issues panel on first load if there are issues
-  useEffect(() => {
-    if (graphReady && !hasAutoOpenedIssues && nodes.length > 0) {
-      const hasCircular = cyclicEdges?.length > 0
-      const hasOrphans = nodes.some(n =>
-        n.data &&
-        (!n.data.imports || n.data.imports.length === 0) &&
-        (!n.data.importedBy || n.data.importedBy.length === 0)
-      )
-      if (hasCircular || hasOrphans) {
-        setIssuesPanelOpen(true)
-        setHasAutoOpenedIssues(true)
-      }
-    }
-  }, [graphReady, nodes, cyclicEdges, hasAutoOpenedIssues])
+  // Auto-open issues panel on first load if there are issues.
+  // Derived during render (guarded by hasAutoOpenedIssues) instead of an
+  // effect, so selecting state doesn't cascade extra renders.
+  const hasCircularIssues = cyclicEdges?.length > 0
+  const hasOrphanIssues = nodes.some(n =>
+    n.data &&
+    (!n.data.imports || n.data.imports.length === 0) &&
+    (!n.data.importedBy || n.data.importedBy.length === 0)
+  )
+  if (
+    graphReady &&
+    !hasAutoOpenedIssues &&
+    nodes.length > 0 &&
+    (hasCircularIssues || hasOrphanIssues)
+  ) {
+    setIssuesPanelOpen(true)
+    setHasAutoOpenedIssues(true)
+  }
 
   // Demo mode
   if (demoMode) {
@@ -119,9 +123,9 @@ function App() {
       <div style={{
         display: 'flex',
         height: '100vh',
-        background: '#0a0a12',
-        color: '#f1f5f9',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        background: '#0a0a0a',
+        color: '#f5f5f5',
+        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         overflow: 'hidden'
       }}>
         <div style={{
@@ -151,56 +155,56 @@ function App() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
-      height: '100vh', background: '#0a0a12',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      overflow: 'hidden', color: '#f1f5f9'
+      height: '100vh', background: '#0a0a0a',
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+      overflow: 'hidden', color: '#f5f5f5'
     }}>
 
       {/* ── TOP BAR ── */}
       <div style={{
         height: '48px', flexShrink: 0,
-        background: '#0d0d14',
-        borderBottom: '1px solid #1e1e2e',
+        background: '#111111',
+        borderBottom: '1px solid rgba(255,255,255,0.12)',
         display: 'flex', alignItems: 'center',
         padding: '0 20px', gap: '16px', zIndex: 20
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
             width: '26px', height: '26px',
-            background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+            background: 'linear-gradient(135deg, #e2e2e2, #b0b0b0)',
             borderRadius: '7px', display: 'flex',
             alignItems: 'center', justifyContent: 'center', fontSize: '13px'
           }}>⚡</div>
-          <span style={{ fontWeight: '700', fontSize: '15px' }}>
-            React<span style={{ color: '#7c3aed' }}>Viz</span>
+          <span style={{ fontWeight: '600', fontSize: '15px' }}>
+            React<span style={{ color: '#e2e2e2' }}>Viz</span>
           </span>
         </div>
 
-        <div style={{ color: '#334155', fontSize: '13px' }}>
-          My Projects › <span style={{ color: '#64748b' }}>{selectedProject?.name || 'Unsaved'}</span>
+        <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px' }}>
+          My Projects › <span style={{ color: '#a0a0a0' }}>{selectedProject?.name || 'Unsaved'}</span>
         </div>
 
         {stats && <StatsDisplay stats={stats} />}
 
         {graphReady && (
           <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto', alignItems: 'center' }}>
-            <span style={{ color: '#475569', fontSize: '12px', marginRight: '4px' }}>Export:</span>
+            <span style={{ color: '#6b6b6b', fontSize: '12px', marginRight: '4px' }}>Export:</span>
             <button
               onClick={() => graphCanvasRef.current?.exportPNG()}
               style={{
-                padding: '5px 10px', background: '#13131f',
-                border: '1px solid #2a2a3d', borderRadius: '6px',
-                color: '#94a3b8', cursor: 'pointer', fontSize: '11px',
+                padding: '5px 10px', background: '#1a1a1a',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px',
+                color: '#a0a0a0', cursor: 'pointer', fontSize: '11px',
                 fontWeight: '500',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = '#7c3aed'
-                e.currentTarget.style.color = '#a78bfa'
+                e.currentTarget.style.borderColor = '#e2e2e2'
+                e.currentTarget.style.color = '#ffffff'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '#2a2a3d'
-                e.currentTarget.style.color = '#94a3b8'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+                e.currentTarget.style.color = '#a0a0a0'
               }}
               title="Export as PNG"
             >
@@ -209,19 +213,19 @@ function App() {
             <button
               onClick={() => graphCanvasRef.current?.exportSVG()}
               style={{
-                padding: '5px 10px', background: '#13131f',
-                border: '1px solid #2a2a3d', borderRadius: '6px',
-                color: '#94a3b8', cursor: 'pointer', fontSize: '11px',
+                padding: '5px 10px', background: '#1a1a1a',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px',
+                color: '#a0a0a0', cursor: 'pointer', fontSize: '11px',
                 fontWeight: '500',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = '#7c3aed'
-                e.currentTarget.style.color = '#a78bfa'
+                e.currentTarget.style.borderColor = '#e2e2e2'
+                e.currentTarget.style.color = '#ffffff'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '#2a2a3d'
-                e.currentTarget.style.color = '#94a3b8'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+                e.currentTarget.style.color = '#a0a0a0'
               }}
               title="Export as SVG"
             >
@@ -230,19 +234,19 @@ function App() {
             <button
               onClick={() => graphCanvasRef.current?.exportJSON()}
               style={{
-                padding: '5px 10px', background: '#13131f',
-                border: '1px solid #2a2a3d', borderRadius: '6px',
-                color: '#94a3b8', cursor: 'pointer', fontSize: '11px',
+                padding: '5px 10px', background: '#1a1a1a',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px',
+                color: '#a0a0a0', cursor: 'pointer', fontSize: '11px',
                 fontWeight: '500',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = '#7c3aed'
-                e.currentTarget.style.color = '#a78bfa'
+                e.currentTarget.style.borderColor = '#e2e2e2'
+                e.currentTarget.style.color = '#ffffff'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = '#2a2a3d'
-                e.currentTarget.style.color = '#94a3b8'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+                e.currentTarget.style.color = '#a0a0a0'
               }}
               title="Export as JSON"
             >
@@ -255,8 +259,8 @@ function App() {
           onClick={handleBackToInput}
           style={{
             padding: '6px 12px', background: 'transparent',
-            border: '1px solid #1e1e2e', borderRadius: '7px',
-            color: '#64748b', cursor: 'pointer', fontSize: '12px',
+            border: '1px solid rgba(255,255,255,0.12)', borderRadius: '7px',
+            color: '#6b6b6b', cursor: 'pointer', fontSize: '12px',
             marginLeft: '8px'
           }}
         >← Back</button>
@@ -265,176 +269,7 @@ function App() {
       {/* ── MAIN AREA ── */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-        {/* ── LEFT SIDEBAR ── */}
-        <div style={{
-          width: '260px', flexShrink: 0,
-          background: '#0d0d14',
-          borderRight: '1px solid #1e1e2e',
-          display: 'flex', flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
-
-          {/* Search */}
-          <div style={{ padding: '12px', borderBottom: '1px solid #1e1e2e', flexShrink: 0 }}>
-            <div style={{ position: 'relative' }}>
-              <span style={{
-                position: 'absolute', left: '10px', top: '50%',
-                transform: 'translateY(-50%)', color: '#475569', fontSize: '13px'
-              }}>🔍</span>
-              <input
-                type="text"
-                placeholder="Search node..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{
-                  width: '100%', padding: '8px 12px 8px 32px',
-                  background: '#13131f', border: '1px solid #1e1e2e',
-                  borderRadius: '8px', color: '#f1f5f9',
-                  fontSize: '13px', outline: 'none', boxSizing: 'border-box'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Legend */}
-          <NodesLegend />
-
-          {/* Node info */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
-            {selectedNode ? (
-              <>
-                <div style={{
-                  background: COLORS.bg.card,
-                  border: `1px solid ${COLORS.border.light}`,
-                  borderRadius: '10px',
-                  padding: '14px',
-                  marginBottom: '16px'
-                }}>
-                  <div style={{
-                    display: 'inline-block',
-                    padding: '3px 10px',
-                    background: `${getNodeColor(selectedNode.nodeType)}22`,
-                    border: `1px solid ${getNodeColor(selectedNode.nodeType)}44`,
-                    borderRadius: '4px',
-                    marginBottom: '8px'
-                  }}>
-                    <span style={{
-                      fontSize: TYPOGRAPHY.size.xs,
-                      color: getNodeColor(selectedNode.nodeType),
-                      fontWeight: TYPOGRAPHY.weight.bold,
-                      textTransform: 'uppercase'
-                    }}>{selectedNode.nodeType}</span>
-                  </div>
-                  <div style={{
-                    fontFamily: TYPOGRAPHY.fontFamily.mono,
-                    fontSize: TYPOGRAPHY.size.xl,
-                    fontWeight: TYPOGRAPHY.weight.bold,
-                    color: COLORS.text.primary,
-                    wordBreak: 'break-word'
-                  }}>{selectedNode.label}</div>
-                </div>
-
-                <ImportList
-                  title="Imports"
-                  items={selectedNode.imports}
-                  borderColor={COLORS.primary.DEFAULT}
-                  textColor={COLORS.primary.light}
-                />
-
-                <ImportList
-                  title="Used By"
-                  items={selectedNode.importedBy}
-                  borderColor={COLORS.status.success}
-                  textColor="#86efac"
-                />
-
-                <button
-                  onClick={handleShowInspector}
-                  style={{
-                    width: '100%', padding: '9px',
-                    background: '#7c3aed22',
-                    border: '1px solid #7c3aed44',
-                    borderRadius: '8px', color: '#a78bfa',
-                    cursor: 'pointer', fontSize: '12px', fontWeight: '600'
-                  }}
-                >💬 Ask AI about this file</button>
-              </>
-            ) : (
-              <div style={{
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                paddingTop: '40px', gap: '10px', opacity: 0.3
-              }}>
-                <div style={{ fontSize: '24px' }}>🔍</div>
-                <div style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
-                  Click a node to inspect
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* AI Context */}
-          <div style={{ padding: '14px 16px', borderTop: '1px solid #1e1e2e', flexShrink: 0 }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center', marginBottom: '10px'
-            }}>
-              <span style={{
-                fontSize: '11px', color: '#475569', fontWeight: '700',
-                textTransform: 'uppercase', letterSpacing: '0.8px'
-              }}>AI Context</span>
-              <button
-                onClick={toggleKeyInput}
-                style={{
-                  background: 'none', border: 'none',
-                  color: '#475569', cursor: 'pointer', fontSize: '14px'
-                }}
-              >⚙</button>
-            </div>
-
-            {showKeyInput && (
-              <input
-                type="password"
-                value={apiKey}
-                onChange={e => handleApiKeyChange(e.target.value)}
-                placeholder="OpenRouter API key..."
-                style={{
-                  width: '100%', padding: '8px 10px',
-                  background: '#13131f', border: '1px solid #1e1e2e',
-                  borderRadius: '7px', color: '#f1f5f9',
-                  fontSize: '12px', outline: 'none',
-                  boxSizing: 'border-box', marginBottom: '8px'
-                }}
-              />
-            )}
-
-            {!showKeyInput && (
-              <div style={{
-                padding: '8px 10px', background: '#13131f',
-                border: '1px solid #1e1e2e', borderRadius: '7px',
-                color: apiKey ? '#22c55e' : '#475569',
-                fontSize: '12px', marginBottom: '8px'
-              }}>
-                {apiKey ? '✓ API Key configured' : 'API Key Required'}
-              </div>
-            )}
-
-            <button
-              onClick={() => {}}
-              style={{
-                width: '100%', padding: '9px',
-                background: apiKey ? '#7c3aed' : '#13131f',
-                border: `1px solid ${apiKey ? '#7c3aed' : '#1e1e2e'}`,
-                borderRadius: '7px',
-                color: apiKey ? '#fff' : '#334155',
-                cursor: apiKey ? 'pointer' : 'not-allowed',
-                fontSize: '12px', fontWeight: '600', transition: 'all 0.2s'
-              }}
-            >💬 Open AI Chat</button>
-          </div>
-        </div>
-
-        {/* ── GRAPH CANVAS ── */}
+        {/* ── GRAPH AREA ── */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           <GraphCanvas
             ref={graphCanvasRef}
@@ -456,22 +291,249 @@ function App() {
           />
         </div>
 
-        {/* ── RIGHT PANEL ── */}
-        {showInspector && (
-          <NodeInspector
-            node={selectedNode}
-            depMap={depMap}
-            stats={stats}
-            messages={messages}
-            loading={loading}
-            error={error}
-            onSendMessage={handleSendMessage}
-            onClearChat={clearChat}
-            apiKey={apiKey}
-            onApiKeyChange={handleApiKeyChange}
-            onClose={closeInspector}
-          />
-        )}
+        {/* ── SIDEBAR ── */}
+        <div style={{
+          width: '260px', flexShrink: 0,
+          background: '#111111',
+          borderLeft: '1px solid rgba(255,255,255,0.12)',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          {/* Tabs */}
+          <div style={{
+            display: 'flex',
+            borderBottom: '1px solid rgba(255,255,255,0.12)',
+            flexShrink: 0
+          }}>
+            {['info', 'files'].map(t => (
+              <button
+                key={t}
+                onClick={() => setSidebarTab(t)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: `2px solid ${sidebarTab === t ? '#e2e2e2' : 'transparent'}`,
+                  color: sidebarTab === t ? '#ffffff' : '#6b6b6b',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: sidebarTab === t ? '600' : '400',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  transition: 'all 0.2s'
+                }}
+              >{t === 'info' ? '📋 Info' : '📁 Files'}</button>
+            ))}
+          </div>
+
+          {sidebarTab === 'info' ? (
+            <>
+              {/* Search */}
+              <div style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }}>
+                <div style={{ position: 'relative' }}>
+                  <span style={{
+                    position: 'absolute', left: '10px', top: '50%',
+                    transform: 'translateY(-50%)', color: '#6b6b6b', fontSize: '13px'
+                  }}>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search node..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 12px 8px 32px',
+                      background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '8px', color: '#f5f5f5',
+                      fontSize: '13px', outline: 'none', boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Legend */}
+              <NodesLegend />
+
+              {/* Node info */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+                {selectedNode ? (
+                  <>
+                    <div style={{
+                      background: COLORS.bg.card,
+                      border: `1px solid ${COLORS.border.light}`,
+                      borderRadius: '10px',
+                      padding: '14px',
+                      marginBottom: '16px'
+                    }}>
+                      <div style={{
+                        display: 'inline-block',
+                        padding: '3px 10px',
+                        background: `${getNodeColor(selectedNode.nodeType)}22`,
+                        border: `1px solid ${getNodeColor(selectedNode.nodeType)}44`,
+                        borderRadius: '4px',
+                        marginBottom: '8px'
+                      }}>
+                        <span style={{
+                          fontSize: TYPOGRAPHY.size.xs,
+                          color: getNodeColor(selectedNode.nodeType),
+                          fontWeight: TYPOGRAPHY.weight.bold,
+                          textTransform: 'uppercase'
+                        }}>{selectedNode.nodeType}</span>
+                      </div>
+                      <div style={{
+                        fontFamily: TYPOGRAPHY.fontFamily.mono,
+                        fontSize: TYPOGRAPHY.size.xl,
+                        fontWeight: TYPOGRAPHY.weight.bold,
+                        color: COLORS.text.primary,
+                        wordBreak: 'break-word'
+                      }}>{selectedNode.label}</div>
+                    </div>
+
+                    <ImportList
+                      title="Imports"
+                      items={selectedNode.imports}
+                      borderColor={COLORS.primary.DEFAULT}
+                      textColor={COLORS.primary.light}
+                    />
+
+                    <ImportList
+                      title="Used By"
+                      items={selectedNode.importedBy}
+                      borderColor={COLORS.status.success}
+                      textColor="#86efac"
+                    />
+
+                <button
+                  onClick={() => { setSidebarTab('info'); handleShowInspector() }}
+                  style={{
+                    width: '100%', padding: '9px',
+                    background: '#e2e2e222',
+                    border: '1px solid #e2e2e244',
+                    borderRadius: '8px', color: '#ffffff',
+                    cursor: 'pointer', fontSize: '12px', fontWeight: '600'
+                  }}
+                >💬 Ask AI about this file</button>
+                  </>
+                ) : (
+                  <div style={{
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    paddingTop: '40px', gap: '10px', opacity: 0.3
+                  }}>
+                    <div style={{ fontSize: '24px' }}>🔍</div>
+                  <div style={{ color: '#a0a0a0', fontSize: '12px', textAlign: 'center' }}>
+                    Click a node to inspect
+                  </div>
+                  </div>
+                )}
+              </div>
+
+              {/* AI Context */}
+              <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'center', marginBottom: '10px'
+                }}>
+                  <span style={{
+                    fontSize: '11px', color: '#6b6b6b', fontWeight: '600',
+                    textTransform: 'uppercase', letterSpacing: '0.8px'
+                  }}>AI Context</span>
+                  <button
+                    onClick={toggleKeyInput}
+                    style={{
+                      background: 'none', border: 'none',
+                      color: '#6b6b6b', cursor: 'pointer', fontSize: '14px'
+                    }}
+                  >⚙</button>
+                </div>
+
+                {showKeyInput && (
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={e => handleApiKeyChange(e.target.value)}
+                    placeholder="OpenRouter API key..."
+                    style={{
+                      width: '100%', padding: '8px 10px',
+                      background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: '7px', color: '#f5f5f5',
+                      fontSize: '12px', outline: 'none',
+                      boxSizing: 'border-box', marginBottom: '8px'
+                    }}
+                  />
+                )}
+
+                {!showKeyInput && (
+                  <div style={{
+                    padding: '8px 10px', background: '#1a1a1a',
+                    border: '1px solid rgba(255,255,255,0.12)', borderRadius: '7px',
+                    color: apiKey ? '#5a9e6f' : '#6b6b6b',
+                    fontSize: '12px', marginBottom: '8px'
+                  }}>
+                    {apiKey ? '✓ API Key configured' : 'API Key Required'}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => { setSidebarTab('info') }}
+                  style={{
+                    width: '100%', padding: '9px',
+                    background: apiKey ? '#e2e2e233' : '#1a1a1a',
+                    border: `1px solid ${apiKey ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)'}`,
+                    borderRadius: '7px',
+                    color: apiKey ? '#ffffff' : '#6b6b6b',
+                    cursor: apiKey ? 'pointer' : 'not-allowed',
+                    fontSize: '12px', fontWeight: '600', transition: 'all 0.2s'
+                  }}
+                >💬 Open AI Chat</button>
+              </div>
+            </>
+          ) : (
+            /* Files tab */
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+              <div style={{
+                fontSize: '11px', color: '#6b6b6b', fontWeight: '600',
+                textTransform: 'uppercase', letterSpacing: '0.8px',
+                marginBottom: '10px', padding: '0 4px'
+              }}>Files ({nodes.length})</div>
+              {nodes.map(n => (
+                <div
+                  key={n.id}
+                  onClick={() => handleNodeClick(n)}
+                  style={{
+                    padding: '7px 10px',
+                    marginBottom: '3px',
+                    background: selectedNode?.id === n.id ? '#e2e2e222' : 'transparent',
+                    borderRadius: '6px',
+                    borderLeft: `3px solid ${getNodeColor(n.data?.nodeType || 'file')}`,
+                    color: selectedNode?.id === n.id ? '#ffffff' : '#a0a0a0',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={e => { if (selectedNode?.id !== n.id) { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = '#f5f5f5' } }}
+                  onMouseLeave={e => { if (selectedNode?.id !== n.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a0a0a0' } }}
+                >{n.data?.label || n.id}</div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── FLOATING AI ASSISTANT ── */}
+        <NodeInspector
+          node={selectedNode}
+          depMap={depMap}
+          stats={stats}
+          messages={messages}
+          loading={loading}
+          error={error}
+          onSendMessage={handleSendMessage}
+          onClearChat={clearChat}
+          apiKey={apiKey}
+          onApiKeyChange={handleApiKeyChange}
+          onClose={closeInspector}
+        />
       </div>
     </div>
   )

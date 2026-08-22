@@ -9,7 +9,11 @@ function RunHistoryItem({ run, isSelected, isDisabled, onSelect }) {
   const runId = run?.id || 'unknown'
   const createdAt = run?.createdAt || ''
   const stats = run?.stats || {}
-  
+
+  const formattedDate = formatDate(createdAt, { fallback: '' })
+  const dateLabel =
+    formattedDate && formattedDate !== 'Invalid date' ? formattedDate : 'Unknown date'
+
   const handleClick = () => {
     if (!isDisabled && runId !== 'unknown') {
       onSelect(runId)
@@ -35,8 +39,8 @@ function RunHistoryItem({ run, isSelected, isDisabled, onSelect }) {
           padding: '10px 12px',
           borderRadius: '6px',
           cursor: isDisabled ? 'not-allowed' : 'pointer',
-          background: isSelected ? '#7c3aed22' : '#13131f',
-          border: isSelected ? '1px solid #7c3aed44' : '1px solid #1e1e2e',
+          background: isSelected ? '#e2e2e222' : '#1a1a1a',
+          border: isSelected ? '1px solid #e2e2e244' : '1px solid rgba(255,255,255,0.12)',
           opacity: isDisabled ? 0.5 : 1,
           transition: 'all 0.15s',
           outline: 'none',
@@ -47,28 +51,28 @@ function RunHistoryItem({ run, isSelected, isDisabled, onSelect }) {
         }}
         onMouseEnter={e => {
           if (!isDisabled && !isSelected) {
-            e.currentTarget.style.borderColor = '#7c3aed44'
+            e.currentTarget.style.borderColor = '#e2e2e244'
           }
         }}
         onMouseLeave={e => {
           if (!isSelected) {
-            e.currentTarget.style.borderColor = '#1e1e2e'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
           }
         }}
       >
         <div style={{
           fontSize: '11px',
-          color: '#94a3b8',
+          color: '#a0a0a0',
           marginBottom: '4px'
         }}>
-          {formatDate(createdAt) || 'Unknown date'}
+          {dateLabel}
         </div>
         {stats && (stats.totalFiles > 0 || stats.totalComponents > 0) && (
           <div style={{
             display: 'flex',
             gap: '8px',
             fontSize: '11px',
-            color: '#64748b'
+            color: '#6b6b6b'
           }}>
             {stats.totalFiles > 0 && <span>{stats.totalFiles} files</span>}
             {stats.totalComponents > 0 && <span>{stats.totalComponents} comps</span>}
@@ -76,7 +80,7 @@ function RunHistoryItem({ run, isSelected, isDisabled, onSelect }) {
         )}
         <div style={{
           fontSize: '11px',
-          color: '#7c3aed',
+          color: '#e2e2e2',
           marginTop: '6px',
           fontWeight: '500'
         }}>
@@ -147,9 +151,9 @@ export default function RunHistoryList({
           style={{
             padding: '6px 12px',
             background: 'transparent',
-            border: '1px solid #7c3aed',
+            border: '1px solid #e2e2e2',
             borderRadius: '6px',
-            color: '#7c3aed',
+            color: '#e2e2e2',
             cursor: loading ? 'not-allowed' : 'pointer',
             fontSize: '12px'
           }}

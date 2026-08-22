@@ -100,8 +100,6 @@ Stats: ${stats.totalFiles} files, ${stats.totalComponents} components, ${stats.t
         }
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({}))
-          const msg = errData?.error?.message || `Model ${model} failed (${res.status})`
           // skip to next model
           continue
         }
@@ -121,7 +119,7 @@ Stats: ${stats.totalFiles} files, ${stats.totalComponents} components, ${stats.t
         success = true
         break // done
 
-      } catch (err) {
+      } catch {
         continue // network error — try next model
       }
     }

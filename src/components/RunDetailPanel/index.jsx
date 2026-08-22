@@ -73,6 +73,22 @@ export default function RunDetailPanel({ run, loading = false, error = null }) {
         <RunDetailStats stats={stats} />
         <RunDetailSnapshot hasSnapshot={hasSnapshot} />
         {hasSnapshot && <RunDetailActionHint />}
+        <div
+          data-testid="run-detail-placeholder"
+          style={{
+            marginBottom: '20px',
+            padding: '24px',
+            background: '#1e293b50',
+            borderRadius: '8px',
+            border: '1px dashed #475569',
+            textAlign: 'center',
+            color: '#94a3b8',
+            fontSize: '13px'
+          }}
+        >
+          📈 Graph Preview
+          <div style={{ marginTop: '6px', fontSize: '12px' }}>Coming soon</div>
+        </div>
       </div>
     </div>
   )

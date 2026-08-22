@@ -49,7 +49,7 @@ export default function RunDetailSnapshot({ hasSnapshot }) {
             fontWeight: '500'
           }}
         >
-          {hasSnapshot ? 'Ready to visualize' : 'No snapshot data'}
+          {hasSnapshot ? 'Available' : 'No snapshot'}
         </span>
       </div>
     </div>

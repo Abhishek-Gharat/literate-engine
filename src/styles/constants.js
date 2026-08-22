@@ -1,76 +1,115 @@
-/**
- * Style Constants Module
- * Centralized style tokens to ensure consistency across the application
- * and eliminate magic values scattered throughout components.
- */
-
-// ============================================
-// COLOR PALETTE
-// ============================================
-
+/* ── JS Color Tokens (single source of truth) ── */
 export const COLORS = {
-  // Primary brand colors
   primary: {
-    DEFAULT: '#7c3aed',
-    light: '#a78bfa',
-    dark: '#6d28d9',
-    muted: '#7c3aed22',
-    border: '#7c3aed44',
+    DEFAULT: '#ffffff',
+    light: '#ffffff',
+    dark: '#a1a1a1',
+    muted: 'rgba(255,255,255,0.13)',
+    border: 'rgba(255,255,255,0.27)',
   },
-
-  // Background colors
   bg: {
-    main: '#0a0a12',
-    panel: '#0d0d14',
-    card: '#13131f',
-    input: '#13131f',
-    hover: '#13131f',
+    main: '#000000',
+    panel: '#0a0a0a',
+    card: '#111111',
+    input: '#0a0a0a',
+    hover: '#1a1a1a',
+    surface: '#0a0a0a',
+    elevated: '#111111',
   },
-
-  // Border colors
   border: {
-    DEFAULT: '#1e1e2e',
-    light: '#2a2a3d',
-    muted: '#334155',
+    DEFAULT: 'rgba(255,255,255,0.10)',
+    light: 'rgba(255,255,255,0.20)',
+    muted: 'rgba(255,255,255,0.06)',
+    medium: 'rgba(255,255,255,0.20)',
+    subtle: 'rgba(255,255,255,0.10)',
   },
-
-  // Text colors
   text: {
-    primary: '#f1f5f9',
-    secondary: '#94a3b8',
-    muted: '#64748b',
-    dark: '#475569',
+    primary: '#ededed',
+    secondary: '#a1a1a1',
+    muted: '#71717a',
   },
-
-  // Node type colors
+  accent: {
+    DEFAULT: '#ffffff',
+    dim: '#a1a1a1',
+    bright: '#ffffff',
+  },
   node: {
-    root: '#7c3aed',
-    component: '#059669',
-    hook: '#d97706',
-    page: '#0891b2',
-    external: '#475569',
-    index: '#6366f1',
+    root: '#ffffff',
+    component: '#5a9e6f',
+    hook: '#b07a8a',
+    page: '#4a7c9b',
+    external: '#8a8a8a',
+    index: '#8b6fb0',
   },
-
-  // Status colors
   status: {
-    success: '#22c55e',
-    error: '#ef4444',
-    warning: '#f59e0b',
-    info: '#6366f1',
+    success: '#0cce6b',
+    error: '#ff5c5c',
+    warning: '#f5a623',
+    info: '#4a7c9b',
   },
-
-  // Edge colors
   edge: {
-    DEFAULT: '#818cf8',
-    cyclic: '#f87171',
-    cyclicBg: '#f8717133',
+    DEFAULT: 'rgba(255,255,255,0.25)',
+    cyclic: '#ff5c5c',
+    cyclicBg: 'rgba(255,92,92,0.20)',
+  },
+  glass: {
+    bg: 'rgba(0,0,0,0.80)',
+    bgHeavy: 'rgba(0,0,0,0.95)',
+    border: 'rgba(255,255,255,0.08)',
+    borderHeavy: 'rgba(255,255,255,0.12)',
+  },
+  glow: {
+    accent: 'rgba(255,255,255,0.12)',
+    accentStrong: 'rgba(255,255,255,0.35)',
+    accentPulse: 'rgba(255,255,255,0.50)',
   },
 }
 
-// ============================================
-// SPACING SCALE
-// ============================================
+/* ── CSS Variable names ── */
+export const CSS_VARS = {
+  primary:        'var(--color-primary)',
+  primaryLight:   'var(--color-primary-light)',
+  primaryDark:    'var(--color-primary-dark)',
+  primaryMuted:   'var(--color-primary-muted)',
+  primaryBorder:  'var(--color-primary-border)',
+  bgMain:         'var(--bg-main)',
+  bgPanel:        'var(--bg-panel)',
+  bgCard:         'var(--bg-card)',
+  bgInput:        'var(--bg-input)',
+  bgHover:        'var(--bg-hover)',
+  bgSurface:      'var(--bg-surface)',
+  bgElevated:     'var(--bg-elevated)',
+  borderDefault:  'var(--border-default)',
+  borderLight:    'var(--border-light)',
+  borderMuted:    'var(--border-muted)',
+  borderMedium:   'var(--border-medium)',
+  borderSubtle:   'var(--border-subtle)',
+  textPrimary:    'var(--text-primary)',
+  textSecondary:  'var(--text-secondary)',
+  textMuted:      'var(--text-muted)',
+  accentDefault:  'var(--accent-default)',
+  accentDim:      'var(--accent-dim)',
+  accentBright:   'var(--accent-bright)',
+  nodeRoot:       'var(--node-root)',
+  nodeComponent:  'var(--node-component)',
+  nodeHook:       'var(--node-hook)',
+  nodePage:       'var(--node-page)',
+  nodeExternal:   'var(--node-external)',
+  nodeIndex:      'var(--node-index)',
+  statusSuccess:  'var(--status-success)',
+  statusError:    'var(--status-error)',
+  statusWarning:  'var(--status-warning)',
+  statusInfo:     'var(--status-info)',
+  edgeDefault:    'var(--edge-default)',
+  edgeCyclic:     'var(--edge-cyclic)',
+  glassBg:        'var(--glass-bg)',
+  glassBgHeavy:   'var(--glass-bg-heavy)',
+  glassBorder:    'var(--glass-border)',
+  glassBorderHeavy: 'var(--glass-border-heavy)',
+  glowAccent:     'var(--glow-accent)',
+  glowAccentStrong: 'var(--glow-accent-strong)',
+  glowAccentPulse: 'var(--glow-accent-pulse)',
+}
 
 export const SPACING = {
   xs: '4px',
@@ -83,12 +122,7 @@ export const SPACING = {
   '4xl': '40px',
 }
 
-// ============================================
-// LAYOUT DIMENSIONS
-// ============================================
-
 export const LAYOUT = {
-  // Sidebar widths
   sidebar: {
     left: '260px',
     right: '320px',
@@ -96,32 +130,25 @@ export const LAYOUT = {
     runs: '300px',
     detail: '380px',
   },
-
-  // Heights
   height: {
     topBar: '48px',
     panel: '100vh',
   },
-
-  // Z-index scale
   zIndex: {
     base: 0,
     dropdown: 10,
     sticky: 20,
-    modal: 100,
+    modal: 50,
+    overlay: 100,
   },
 }
 
-// ============================================
-// TYPOGRAPHY
-// ============================================
-
 export const TYPOGRAPHY = {
   fontFamily: {
-    sans: 'system-ui, -apple-system, sans-serif',
-    mono: 'monospace',
+    sans: "'Inter', system-ui, -apple-system, sans-serif",
+    serif: "'DM Serif Display', Georgia, serif",
+    mono: "'JetBrains Mono', 'Fira Code', monospace",
   },
-
   size: {
     xs: '10px',
     sm: '11px',
@@ -130,19 +157,16 @@ export const TYPOGRAPHY = {
     xl: '14px',
     '2xl': '15px',
     '3xl': '16px',
+    '4xl': '18px',
+    '5xl': '22px',
   },
-
   weight: {
+    light: '300',
     normal: '400',
     medium: '500',
     semibold: '600',
-    bold: '700',
   },
 }
-
-// ============================================
-// BORDER RADIUS
-// ============================================
 
 export const BORDER_RADIUS = {
   sm: '4px',
@@ -153,23 +177,15 @@ export const BORDER_RADIUS = {
   full: '9999px',
 }
 
-// ============================================
-// TRANSITIONS
-// ============================================
-
 export const TRANSITIONS = {
   fast: '0.15s',
   normal: '0.2s',
   slow: '0.3s',
 }
 
-// ============================================
-// NODE TYPE CONFIGURATION
-// ============================================
-
 export const NODE_TYPE_CONFIG = {
   root: { icon: '⚡', color: COLORS.node.root, label: 'Root' },
-  entry: { icon: '🚪', color: '#f59e0b', label: 'Entry Point' },
+  entry: { icon: '🚪', color: COLORS.node.page, label: 'Entry Point' },
   page: { icon: '📄', color: COLORS.node.page, label: 'Page' },
   component: { icon: '🧩', color: COLORS.node.component, label: 'Component' },
   hook: { icon: '🪝', color: COLORS.node.hook, label: 'Hook' },
@@ -177,57 +193,46 @@ export const NODE_TYPE_CONFIG = {
   ghost: { icon: '👻', color: COLORS.node.external, label: 'External' },
 }
 
-// ============================================
-// COMMON STYLE OBJECTS
-// ============================================
-
 export const commonStyles = {
   panel: {
     background: COLORS.bg.panel,
-    borderColor: COLORS.border.DEFAULT,
+    borderColor: COLORS.border.subtle,
   },
-
   card: {
     background: COLORS.bg.card,
     borderRadius: BORDER_RADIUS.lg,
-    border: `1px solid ${COLORS.border.light}`,
+    border: `1px solid ${COLORS.border.subtle}`,
   },
-
   button: {
     base: {
       borderRadius: BORDER_RADIUS.md,
-      fontWeight: TYPOGRAPHY.weight.semibold,
+      fontWeight: TYPOGRAPHY.weight.medium,
       cursor: 'pointer',
       transition: `all ${TRANSITIONS.normal}`,
     },
     primary: {
-      background: COLORS.primary.DEFAULT,
-      color: '#fff',
-      border: 'none',
+      background: 'rgba(255,255,255,0.13)',
+      color: COLORS.accent.bright,
+      border: `1px solid ${COLORS.border.medium}`,
     },
     secondary: {
-      background: 'transparent',
-      border: `1px solid ${COLORS.border.DEFAULT}`,
+      background: COLORS.bg.elevated,
+      border: `1px solid ${COLORS.border.subtle}`,
       color: COLORS.text.secondary,
     },
   },
-
   input: {
     background: COLORS.bg.input,
-    border: `1px solid ${COLORS.border.DEFAULT}`,
+    border: `1px solid ${COLORS.border.subtle}`,
     borderRadius: BORDER_RADIUS.md,
     color: COLORS.text.primary,
     outline: 'none',
   },
 }
 
-// ============================================
-// LEGEND ITEMS
-// ============================================
-
 export const NODE_LEGEND_ITEMS = [
   { label: 'Root', color: COLORS.node.root },
-  { label: 'Entry Point', color: '#f59e0b' },
+  { label: 'Entry Point', color: COLORS.node.page },
   { label: 'Component', color: COLORS.node.component },
   { label: 'Hook', color: COLORS.node.hook },
   { label: 'Page', color: COLORS.node.page },

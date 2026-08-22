@@ -1,0 +1,64 @@
+:root {
+  /* ── Accent / Primary ── */
+  --color-primary: #ffffff;
+  --color-primary-light: #ffffff;
+  --color-primary-dark: #a1a1a1;
+  --color-primary-muted: rgba(255,255,255,0.13);
+  --color-primary-border: rgba(255,255,255,0.27);
+
+  /* ── Backgrounds ── */
+  --bg-main: #000000;
+  --bg-panel: #0a0a0a;
+  --bg-card: #111111;
+  --bg-input: #0a0a0a;
+  --bg-hover: #1a1a1a;
+  --bg-surface: #0a0a0a;
+  --bg-elevated: #111111;
+
+  /* ── Borders ── */
+  --border-default: rgba(255,255,255,0.10);
+  --border-light: rgba(255,255,255,0.20);
+  --border-muted: rgba(255,255,255,0.06);
+  --border-medium: rgba(255,255,255,0.20);
+  --border-subtle: rgba(255,255,255,0.10);
+
+  /* ── Text ── */
+  --text-primary: #ededed;
+  --text-secondary: #a1a1a1;
+  --text-muted: #71717a;
+
+  /* ── Accent variations ── */
+  --accent-default: #ffffff;
+  --accent-dim: #a1a1a1;
+  --accent-bright: #ffffff;
+
+  /* ── Node type colors ── */
+  --node-root: #ffffff;
+  --node-component: #5a9e6f;
+  --node-hook: #b07a8a;
+  --node-page: #4a7c9b;
+  --node-external: #8a8a8a;
+  --node-index: #8b6fb0;
+
+  /* ── Status ── */
+  --status-success: #0cce6b;
+  --status-error: #ff5c5c;
+  --status-warning: #f5a623;
+  --status-info: #4a7c9b;
+
+  /* ── Edge ── */
+  --edge-default: rgba(255,255,255,0.25);
+  --edge-cyclic: #ff5c5c;
+  --edge-cyclic-bg: rgba(255,92,92,0.20);
+
+  /* ── Glass ── */
+  --glass-bg: rgba(0,0,0,0.80);
+  --glass-bg-heavy: rgba(0,0,0,0.95);
+  --glass-border: rgba(255,255,255,0.08);
+  --glass-border-heavy: rgba(255,255,255,0.12);
+
+  /* ── Glow ── */
+  --glow-accent: rgba(255,255,255,0.12);
+  --glow-accent-strong: rgba(255,255,255,0.35);
+  --glow-accent-pulse: rgba(255,255,255,0.50);
+}

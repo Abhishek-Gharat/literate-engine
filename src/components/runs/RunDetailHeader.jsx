@@ -39,7 +39,7 @@ export default function RunDetailHeader({ runId, createdAt }) {
           letterSpacing: '0.5px'
         }}
       >
-        {runId.substring(0, 8)}...{runId.substring(runId.length - 4)}
+        {runId}
       </div>
       <div
         data-testid="run-detail-date"

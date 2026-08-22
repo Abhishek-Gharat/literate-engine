@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { 
   DEMO_COLORS, 
   DEMO_SPACING, 
@@ -95,8 +95,6 @@ export function BentoCard({
  * AISummaryCard - AI-generated project summary card
  */
 export function AISummaryCard({ summary, onExplain }) {
-  const [isExpanded, setIsExpanded] = useState(false)
-
   const containerStyle = {
     gridColumn: 'span 2',
     gridRow: 'span 2'

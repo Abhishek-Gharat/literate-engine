@@ -16,16 +16,17 @@ export default function AIExplainPanel({ selectedNode, depMap, stats }) {
   return (
     <div style={{
       position: 'absolute', bottom: '20px', left: '20px',
-      background: '#1e293b', border: '1px solid #334155',
+      background: '#111111', border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: '12px', padding: '16px',
-      width: '300px', zIndex: 10, color: '#f1f5f9',
-      fontFamily: 'sans-serif'
+      width: '300px', zIndex: 10, color: '#ededed',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
     }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-        <span style={{ fontSize: '16px' }}>🧠</span>
-        <span style={{ fontWeight: '700', fontSize: '14px' }}>AI Explain</span>
+        <span style={{ fontSize: '16px' }}>✦</span>
+        <span style={{ fontWeight: '700', fontSize: '14px', color: '#ffffff' }}>AI Explain</span>
       </div>
 
       {/* API Key input */}
@@ -38,23 +39,23 @@ export default function AIExplainPanel({ selectedNode, depMap, stats }) {
             placeholder="OpenRouter API key"
             style={{
               flex: 1, padding: '7px 10px',
-              background: '#0f172a', border: '1px solid #334155',
-              borderRadius: '6px', color: '#f1f5f9',
+              background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '6px', color: '#ededed',
               fontSize: '12px', outline: 'none'
             }}
           />
           <button
             onClick={() => setShowKey(s => !s)}
             style={{
-              padding: '6px 10px', background: '#334155',
-              border: 'none', borderRadius: '6px',
-              color: '#94a3b8', cursor: 'pointer', fontSize: '12px'
+              padding: '6px 10px', background: '#1a1a1a',
+              border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px',
+              color: '#a1a1a1', cursor: 'pointer', fontSize: '12px'
             }}
           >
             {showKey ? 'Hide' : 'Show'}
           </button>
         </div>
-        <p style={{ color: '#475569', fontSize: '11px', margin: '4px 0 0' }}>
+        <p style={{ color: '#71717a', fontSize: '11px', margin: '4px 0 0' }}>
           Free key: openrouter.ai → Sign up → Free tier
         </p>
       </div>
@@ -66,9 +67,9 @@ export default function AIExplainPanel({ selectedNode, depMap, stats }) {
           disabled={!selectedNode || loading}
           style={{
             flex: 1, padding: '8px',
-            background: selectedNode && !loading ? '#7c3aed' : '#334155',
+            background: selectedNode && !loading ? '#ffffff' : '#1a1a1a',
             border: 'none', borderRadius: '6px',
-            color: selectedNode ? '#fff' : '#475569',
+            color: selectedNode && !loading ? '#000000' : '#71717a',
             cursor: selectedNode && !loading ? 'pointer' : 'not-allowed',
             fontSize: '12px', fontWeight: '600'
           }}
@@ -80,9 +81,9 @@ export default function AIExplainPanel({ selectedNode, depMap, stats }) {
           disabled={loading}
           style={{
             flex: 1, padding: '8px',
-            background: !loading ? '#0891b2' : '#334155',
-            border: 'none', borderRadius: '6px',
-            color: '#fff', cursor: loading ? 'not-allowed' : 'pointer',
+            background: !loading ? '#1a1a1a' : '#1a1a1a',
+            border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px',
+            color: !loading ? '#ededed' : '#71717a', cursor: loading ? 'not-allowed' : 'pointer',
             fontSize: '12px', fontWeight: '600'
           }}
         >
@@ -92,25 +93,25 @@ export default function AIExplainPanel({ selectedNode, depMap, stats }) {
 
       {/* Output */}
       {loading && !explanation && (
-        <div style={{ color: '#7c3aed', fontSize: '13px' }}>⏳ Thinking...</div>
+        <div style={{ color: '#ffffff', fontSize: '13px' }}>⏳ Thinking...</div>
       )}
       {error && (
-        <div style={{ color: '#ef4444', fontSize: '12px' }}>❌ {error}</div>
+        <div style={{ color: '#ff5c5c', fontSize: '12px' }}>❌ {error}</div>
       )}
       {explanation && (
         <div style={{
-          background: '#0f172a', borderRadius: '8px',
+          background: '#0a0a0a', borderRadius: '8px',
           padding: '12px', fontSize: '13px',
-          color: '#e2e8f0', lineHeight: '1.6',
-          border: '1px solid #334155', whiteSpace: 'pre-wrap'
+          color: '#ededed', lineHeight: '1.6',
+          border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'pre-wrap'
         }}>
           {explanation}
         </div>
       )}
 
       {!selectedNode && !explanation && !loading && (
-        <p style={{ color: '#475569', fontSize: '12px', margin: 0 }}>
-          Node pe click karo phir "Explain Node" dabao
+        <p style={{ color: '#71717a', fontSize: '12px', margin: 0 }}>
+          Click a node, then press "Explain Node"
         </p>
       )}
     </div>

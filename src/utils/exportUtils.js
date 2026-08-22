@@ -37,7 +37,6 @@ export async function exportGraphAsPNG(reactFlowWrapper, filename = 'reactviz-gr
   }
 
   // Get the actual dimensions of the graph content
-  const bounds = viewport.getBoundingClientRect()
   const wrapperBounds = reactFlowWrapper.getBoundingClientRect()
 
   // Create canvas
@@ -113,7 +112,6 @@ async function exportGraphAsSVGData(reactFlowWrapper) {
   if (!reactFlowWrapper) return null
 
   const viewport = reactFlowWrapper.querySelector('.react-flow__viewport')
-  const pane = reactFlowWrapper.querySelector('.react-flow__pane')
 
   if (!viewport) {
     console.error('Could not find ReactFlow viewport')

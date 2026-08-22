@@ -3,19 +3,6 @@ import { findEntryPoints } from '../../utils/nodeTypeClassifier'
 
 /**
  * UploadCenter - Center panel with upload controls
- *
- * @param {Object} props
- * @param {string} props.mode - Current upload mode ('local' or 'github')
- * @param {Function} props.setMode - Callback to set upload mode
- * @param {string} props.githubUrl - Current GitHub URL value
- * @param {Function} props.setGithubUrl - Callback to set GitHub URL
- * @param {Object|null} props.selectedProject - Currently selected project
- * @param {boolean} props.isAnalyzing - Whether analysis is in progress
- * @param {string} props.hasAnalysisError - Error message from analysis
- * @param {string} props.analysisError - Current error message
- * @param {string} props.analysisSuccess - Success message
- * @param {Function} props.onLocalFiles - Callback for local file upload
- * @param {Function} props.onGithubFetch - Callback for GitHub fetch
  */
 export default function UploadCenter({
   mode,
@@ -39,12 +26,10 @@ export default function UploadCenter({
   const filesAnalyzed = latestStats.totalFiles || 0
   const componentsFound = latestStats.totalComponents || 0
   const hasAnalysis = filesAnalyzed > 0 || componentsFound > 0
-  const snapshotStatus = isAnalyzing ? 'Analyzing...' : hasAnalysis ? 'Analysis complete' : 'Ready to visualize'
-  const statusColor = isAnalyzing ? '#fbbf24' : hasAnalysis ? '#52f0c5' : '#52f0c5'
-  const statusBg = isAnalyzing ? '#451a03' : hasAnalysis ? '#123d45' : '#123d45'
-  const statusBorder = isAnalyzing ? '#92400e' : hasAnalysis ? '#1d766f' : '#1d766f'
+  const statusColor = isAnalyzing ? '#f5a623' : hasAnalysis ? '#0cce6b' : '#0cce6b'
+  const statusBg = isAnalyzing ? 'rgba(245,166,35,0.1)' : hasAnalysis ? 'rgba(12,206,107,0.1)' : 'rgba(12,206,107,0.1)'
+  const statusBorder = isAnalyzing ? 'rgba(245,166,35,0.3)' : hasAnalysis ? 'rgba(12,206,107,0.3)' : 'rgba(12,206,107,0.3)'
 
-  // Extract entry points from the latest run snapshot
   const snapshotFiles = latestRun?.snapshot?.nodes?.map(n => n.id) || []
   const entryPoints = findEntryPoints(snapshotFiles)
   const hasEntryPoints = entryPoints.length > 0
@@ -67,7 +52,7 @@ export default function UploadCenter({
       padding: '24px 32px 32px',
       gap: '16px',
       overflowY: 'auto',
-      background: '#0b1424',
+      background: '#000000',
       minWidth: 0
     }}>
       
@@ -77,10 +62,10 @@ export default function UploadCenter({
           lineHeight: '1.1',
           fontWeight: '800',
           margin: 0,
-          color: '#9ed8dc',
-          textShadow: '2px 2px 0 #25465c'
+          color: '#ffffff',
+          textShadow: 'none'
         }}>Analyze Code</h1>
-        <p style={{ color: '#d7d2e6', margin: '8px 0 0', fontSize: '14px' }}>
+        <p style={{ color: '#a1a1a1', margin: '8px 0 0', fontSize: '14px' }}>
           {selectedProject
             ? `Project: ${selectedProject.name}`
             : 'Select a project or create a new one'}
@@ -118,15 +103,15 @@ export default function UploadCenter({
               height: '44px',
               padding: '0 16px',
               borderRadius: '8px',
-              border: mode === m ? '1px solid #8b5cf6' : '1px solid #4a536a',
+              border: mode === m ? '1px solid #ffffff' : '1px solid rgba(255,255,255,0.15)',
               cursor: isAnalyzing ? 'not-allowed' : 'pointer',
               fontWeight: '800',
               fontSize: '15px',
-              background: mode === m ? '#7c3aed' : '#2a344c',
-              color: mode === m ? '#fff' : '#cbd5e1',
+              background: mode === m ? '#ffffff' : '#111111',
+              color: mode === m ? '#000000' : '#a1a1a1',
               opacity: isAnalyzing ? 0.5 : 1,
               transition: 'all 0.2s',
-              boxShadow: mode === m ? '0 8px 20px #7c3aed28' : 'none',
+              boxShadow: mode === m ? '0 8px 20px rgba(255,255,255,0.3)' : 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -147,11 +132,10 @@ export default function UploadCenter({
       </div>
 
       <div style={{
-        background: '#121d2f',
+        background: '#111111',
         borderRadius: '12px',
         padding: 0,
         width: '100%',
-        // maxWidth: 'none',
         border: 'none',
         opacity: !hasProject ? 0.5 : 1,
         pointerEvents: !hasProject ? 'none' : 'auto',
@@ -173,7 +157,7 @@ export default function UploadCenter({
               data-testid="file-dropzone"
               onClick={() => !isAnalyzing && inputRef.current.click()}
               style={{
-                border: '2px dashed #55507a',
+                border: '2px dashed rgba(255,255,255,0.2)',
                 borderRadius: '10px',
                 minHeight: '200px',
                 padding: '24px 20px',
@@ -191,20 +175,20 @@ export default function UploadCenter({
                 width: '48px',
                 height: '48px',
                 borderRadius: '12px',
-                background: '#2b3150',
+                background: '#1a1a1a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#d8b4fe',
+                color: '#ffffff',
                 fontSize: '26px',
                 fontWeight: 700,
                 lineHeight: 1
               }}>⌂</div>
-              <p style={{ margin: '16px 0 8px', fontWeight: '800', fontSize: '18px' }}>
+              <p style={{ margin: '16px 0 8px', fontWeight: '800', fontSize: '18px', color: '#ededed' }}>
                 {isAnalyzing ? 'Analyzing...' : 'Select Files'}
               </p>
               <p style={{
-                color: '#d7d2e6',
+                color: '#a1a1a1',
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                 fontSize: '13px',
                 letterSpacing: '1.2px',
@@ -213,7 +197,7 @@ export default function UploadCenter({
                 .js .jsx .ts .tsx files supported
               </p>
               <p style={{
-                color: '#768198',
+                color: '#71717a',
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                 fontSize: '13px',
                 letterSpacing: '1px',
@@ -226,12 +210,12 @@ export default function UploadCenter({
         ) : (
           <div style={{
             minHeight: '200px',
-            border: '2px dashed #55507a',
+            border: '2px dashed rgba(255,255,255,0.2)',
             borderRadius: '10px',
             padding: '32px',
             boxSizing: 'border-box'
           }}>
-            <label style={{ fontSize: '14px', color: '#d7d2e6', display: 'block', marginBottom: '8px' }}>
+            <label style={{ fontSize: '14px', color: '#ededed', display: 'block', marginBottom: '8px' }}>
               GitHub Public Repo URL
             </label>
             <input
@@ -245,9 +229,9 @@ export default function UploadCenter({
                 width: '100%',
                 padding: '12px',
                 borderRadius: '8px',
-                border: '1px solid #4a536a',
-                background: '#0b1424',
-                color: '#f1f5f9',
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: '#0a0a0a',
+                color: '#ededed',
                 fontSize: '14px',
                 boxSizing: 'border-box',
                 outline: 'none',
@@ -263,8 +247,8 @@ export default function UploadCenter({
                 padding: '12px',
                 borderRadius: '8px',
                 border: 'none',
-                background: (isAnalyzing || !githubUrl.trim()) ? '#334155' : '#7c3aed',
-                color: (isAnalyzing || !githubUrl.trim()) ? '#64748b' : '#fff',
+                background: (isAnalyzing || !githubUrl.trim()) ? '#1a1a1a' : '#ffffff',
+                color: (isAnalyzing || !githubUrl.trim()) ? '#71717a' : '#000000',
                 fontWeight: '800',
                 fontSize: '14px',
                 cursor: (isAnalyzing || !githubUrl.trim()) ? 'not-allowed' : 'pointer',
@@ -282,19 +266,18 @@ export default function UploadCenter({
         gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '24px'
       }}>
-        {/* cards here  */}
         <MetricCard title="Files Analyzed" value={filesAnalyzed} suffix="files" icon="▤" />
         <MetricCard title="Components Found" value={componentsFound} suffix="components" icon="□" />
         <div style={{
           minHeight: '72px',
-          background: '#121b2b',
-          border: '1px solid #23314b',
+          background: '#111111',
+          border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: '8px',
           padding: '16px',
           boxSizing: 'border-box'
         }}>
           <div style={{
-            color: '#d7d2e6',
+            color: '#a1a1a1',
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
             fontSize: '12px',
             fontWeight: '800',
@@ -315,12 +298,12 @@ export default function UploadCenter({
             fontSize: '13px',
             letterSpacing: '1.6px'
           }}>{
-  isAnalyzing
-    ? '⟳ Analyzing project...'
-    : filesAnalyzed === 0
-      ? '○ No snapshot available'
-      : '✓ Ready to visualize'
-}</div>
+            isAnalyzing
+              ? '⟳ Analyzing project...'
+              : filesAnalyzed === 0
+                ? '○ No snapshot available'
+                : '✓ Ready to visualize'
+          }</div>
         </div>
       </div>
 
@@ -332,15 +315,15 @@ export default function UploadCenter({
         <div style={{
           minHeight: '160px',
           width: '100%',
-          background: '#121b2b',
-          border: '1px solid #23314b',
+          background: '#111111',
+          border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: '8px',
           overflow: 'hidden',
           boxSizing: 'border-box'
         }}>
           <div style={{
             height: '44px',
-            borderBottom: '1px solid #3b465d',
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -348,7 +331,7 @@ export default function UploadCenter({
             boxSizing: 'border-box'
           }}>
             <span style={{
-              color: '#ead7ff',
+              color: '#ededed',
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               fontSize: '12px',
               fontWeight: '800',
@@ -356,7 +339,7 @@ export default function UploadCenter({
               textTransform: 'uppercase'
             }}>Analysis Summary</span>
             <span style={{
-              color: '#6f7890',
+              color: '#71717a',
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               fontSize: '12px',
               letterSpacing: '1.4px'
@@ -373,17 +356,17 @@ export default function UploadCenter({
               width: '112px',
               height: '112px',
               borderRadius: '50%',
-              border: '6px solid #2a344c',
-              borderRightColor: '#7c3aed',
-              borderTopColor: '#7c3aed',
+              border: '6px solid rgba(255,255,255,0.1)',
+              borderRightColor: '#ffffff',
+              borderTopColor: '#ffffff',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <strong style={{ fontSize: '26px', color: '#ece8ff' }}>{hasAnalysis ? Math.min(100, Math.round((componentsFound / Math.max(filesAnalyzed, 1)) * 100)) : 0}%</strong>
+              <strong style={{ fontSize: '26px', color: '#ededed' }}>{hasAnalysis ? Math.min(100, Math.round((componentsFound / Math.max(filesAnalyzed, 1)) * 100)) : 0}%</strong>
               <span style={{
-                color: '#9aa4bd',
+                color: '#a1a1a1',
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                 fontSize: '12px',
                 letterSpacing: '1px'
@@ -391,32 +374,32 @@ export default function UploadCenter({
             </div>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <strong style={{ color: '#ece8ff', fontSize: '16px' }}>Project Stats</strong>
+                <strong style={{ color: '#ededed', fontSize: '16px' }}>Project Stats</strong>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#9aa4bd' }}>Components</span>
-                  <strong style={{ color: '#52f0c5' }}>{latestStats.totalComponents || 0}</strong>
+                  <span style={{ color: '#a1a1a1' }}>Components</span>
+                  <strong style={{ color: '#0cce6b' }}>{latestStats.totalComponents || 0}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#9aa4bd' }}>Hooks</span>
-                  <strong style={{ color: '#52f0c5' }}>{latestStats.totalHooks || 0}</strong>
+                  <span style={{ color: '#a1a1a1' }}>Hooks</span>
+                  <strong style={{ color: '#0cce6b' }}>{latestStats.totalHooks || 0}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#9aa4bd' }}>Contexts</span>
-                  <strong style={{ color: '#52f0c5' }}>{latestStats.totalContexts || 0}</strong>
+                  <span style={{ color: '#a1a1a1' }}>Contexts</span>
+                  <strong style={{ color: '#0cce6b' }}>{latestStats.totalContexts || 0}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#9aa4bd' }}>Routes</span>
-                  <strong style={{ color: '#52f0c5' }}>{latestStats.totalRoutes || 0}</strong>
+                  <span style={{ color: '#a1a1a1' }}>Routes</span>
+                  <strong style={{ color: '#0cce6b' }}>{latestStats.totalRoutes || 0}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#9aa4bd' }}>Config Files</span>
-                  <strong style={{ color: '#52f0c5' }}>{latestStats.totalConfigs || 0}</strong>
+                  <span style={{ color: '#a1a1a1' }}>Config Files</span>
+                  <strong style={{ color: '#0cce6b' }}>{latestStats.totalConfigs || 0}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#9aa4bd' }}>Total Files</span>
-                  <strong style={{ color: '#52f0c5' }}>{filesAnalyzed}</strong>
+                  <span style={{ color: '#a1a1a1' }}>Total Files</span>
+                  <strong style={{ color: '#0cce6b' }}>{filesAnalyzed}</strong>
                 </div>
                 {hasEntryPoints && (
                   <div style={{ 
@@ -425,12 +408,12 @@ export default function UploadCenter({
                     gridColumn: '1 / -1',
                     padding: '6px 0',
                     marginTop: '4px',
-                    borderTop: '1px solid rgba(71, 85, 105, 0.3)'
+                    borderTop: '1px solid rgba(255,255,255,0.1)'
                   }}>
-                    <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#f5a623', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>🚪</span> Entry Points
                     </span>
-                    <strong style={{ color: '#fbbf24' }}>{entryPoints.length}</strong>
+                    <strong style={{ color: '#f5a623' }}>{entryPoints.length}</strong>
                   </div>
                 )}
               </div>
@@ -438,7 +421,7 @@ export default function UploadCenter({
                 <div style={{ marginTop: '10px' }}>
                   <div style={{ 
                     fontSize: '11px', 
-                    color: '#94a3b8', 
+                    color: '#71717a', 
                     marginBottom: '4px',
                     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace'
                   }}>
@@ -448,11 +431,11 @@ export default function UploadCenter({
                     {entryPoints.slice(0, 3).map((file, i) => (
                       <span key={i} style={{
                         fontSize: '11px',
-                        color: '#fbbf24',
-                        background: 'rgba(245, 158, 11, 0.15)',
+                        color: '#f5a623',
+                        background: 'rgba(245,166,35,0.15)',
                         padding: '2px 8px',
                         borderRadius: '4px',
-                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        border: '1px solid rgba(245,166,35,0.3)',
                         fontFamily: 'monospace'
                       }}>
                         {file.split('/').pop()}
@@ -461,7 +444,7 @@ export default function UploadCenter({
                     {entryPoints.length > 3 && (
                       <span style={{
                         fontSize: '11px',
-                        color: '#64748b',
+                        color: '#71717a',
                         padding: '2px 8px'
                       }}>
                         +{entryPoints.length - 3} more
@@ -476,8 +459,8 @@ export default function UploadCenter({
 
         <div style={{
           minHeight: '160px',
-          background: '#1a1a2e',
-          border: '1px solid #2a2a3d',
+          background: '#111111',
+          border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: '8px',
           padding: '20px',
           color: '#fff',
@@ -485,8 +468,8 @@ export default function UploadCenter({
           position: 'relative',
           overflow: 'hidden'
         }}>
-          <h2 style={{ margin: 0, fontSize: '20px', color: '#f1f5f9' }}>Try Demo Project</h2>
-          <p style={{ margin: '12px 24px 16px 0', fontSize: '15px', lineHeight: '1.45', color: '#94a3b8' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', color: '#ededed' }}>Try Demo Project</h2>
+          <p style={{ margin: '12px 24px 16px 0', fontSize: '15px', lineHeight: '1.45', color: '#a1a1a1' }}>
             See ReactViz in action with a pre-configured e-commerce React app. 
             No setup required — explore the architecture instantly.
           </p>
@@ -495,10 +478,10 @@ export default function UploadCenter({
             disabled={isAnalyzing}
             style={{
               padding: '10px 20px',
-              background: '#6366f1',
+              background: '#ffffff',
               border: 'none',
               borderRadius: '6px',
-              color: '#fff',
+              color: '#000',
               fontSize: '14px',
               fontWeight: '600',
               cursor: isAnalyzing ? 'not-allowed' : 'pointer',
@@ -510,12 +493,12 @@ export default function UploadCenter({
             }}
             onMouseEnter={(e) => {
               if (!isAnalyzing) {
-                e.currentTarget.style.background = '#4f46e5'
+                e.currentTarget.style.background = '#e2e2e2'
                 e.currentTarget.style.transform = 'translateY(-1px)'
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#6366f1'
+              e.currentTarget.style.background = '#ffffff'
               e.currentTarget.style.transform = 'translateY(0)'
             }}
           >
@@ -530,8 +513,8 @@ export default function UploadCenter({
             width: '64px',
             height: '64px',
             borderRadius: '12px',
-            background: '#6366f115',
-            border: '1px solid #6366f130',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -545,7 +528,7 @@ export default function UploadCenter({
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          color: '#7c3aed',
+          color: '#ffffff',
           fontWeight: '600'
         }}>
           <span style={{ animation: 'spin 1s linear infinite' }}>...</span>
@@ -555,11 +538,11 @@ export default function UploadCenter({
 
       {analysisSuccess && (
         <div data-testid="success-message" style={{
-          background: '#22c55e15',
-          border: '1px solid #22c55e40',
+          background: 'rgba(12,206,107,0.1)',
+          border: '1px solid rgba(12,206,107,0.4)',
           borderRadius: '8px',
           padding: '12px 16px',
-          color: '#22c55e',
+          color: '#0cce6b',
           fontSize: '14px',
           display: 'flex',
           alignItems: 'center',
@@ -571,11 +554,11 @@ export default function UploadCenter({
 
       {(hasAnalysisError || analysisError) && (
         <div data-testid="error-message" style={{
-          background: '#ef444415',
-          border: '1px solid #ef444440',
+          background: 'rgba(255,92,92,0.1)',
+          border: '1px solid rgba(255,92,92,0.4)',
           borderRadius: '8px',
           padding: '12px 16px',
-          color: '#ef4444',
+          color: '#ff5c5c',
           fontSize: '14px',
           display: 'flex',
           alignItems: 'center',
@@ -592,8 +575,8 @@ function MetricCard({ title, value, suffix, icon }) {
   return (
     <div style={{
       minHeight: '72px',
-      background: '#121b2b',
-      border: '1px solid #23314b',
+      background: '#111111',
+      border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: '8px',
       padding: '16px',
       display: 'flex',
@@ -603,7 +586,7 @@ function MetricCard({ title, value, suffix, icon }) {
     }}>
       <div>
         <div style={{
-          color: '#d7d2e6',
+          color: '#a1a1a1',
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           fontSize: '12px',
           fontWeight: '800',
@@ -612,16 +595,16 @@ function MetricCard({ title, value, suffix, icon }) {
           marginBottom: '6px'
         }}>{title}</div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-          <strong style={{ color: '#ece8ff', fontSize: '22px', lineHeight: 1 }}>{value}</strong>
-          <span style={{ color: '#b9c0d3', fontSize: '13px' }}>{suffix}</span>
+          <strong style={{ color: '#ededed', fontSize: '22px', lineHeight: 1 }}>{value}</strong>
+          <span style={{ color: '#a1a1a1', fontSize: '13px' }}>{suffix}</span>
         </div>
       </div>
       <div style={{
         width: '40px',
         height: '40px',
         borderRadius: '6px',
-        background: '#2a344c',
-        color: '#d8b4fe',
+        background: '#1a1a1a',
+        color: '#ffffff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -27,14 +27,14 @@ export default function InfoTab({ node, onSwitchToChat }) {
   }
 
   const TYPE_COLORS = {
-    root: '#7c3aed',
-    component: '#059669',
-    hook: '#d97706',
-    page: '#0891b2',
-    ghost: '#475569'
+    root: '#e2e2e2',
+    component: '#5a9e6f',
+    hook: '#b07a8a',
+    page: '#4a7c9b',
+    ghost: '#8a8a8a'
   }
 
-  const color = TYPE_COLORS[node.nodeType] || '#7c3aed'
+  const color = TYPE_COLORS[node.nodeType] || '#e2e2e2'
   const importCount = node.imports?.length || 0
   const usedByCount = node.importedBy?.length || 0
 
@@ -42,8 +42,8 @@ export default function InfoTab({ node, onSwitchToChat }) {
     <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
       {/* Node card */}
       <div style={{
-        background: '#13131f',
-        border: '1px solid #2a2a3d',
+        background: '#1a1a1a',
+        border: '1px solid rgba(255,255,255,0.12)',
         borderRadius: '10px',
         padding: '14px',
         marginBottom: '16px'
@@ -64,10 +64,10 @@ export default function InfoTab({ node, onSwitchToChat }) {
           }}>{node.nodeType}</span>
         </div>
         <div style={{
-          fontFamily: 'monospace',
+          fontFamily: "'JetBrains Mono', monospace",
           fontSize: '15px',
-          fontWeight: '700',
-          color: '#f1f5f9',
+          fontWeight: '500',
+          color: '#f5f5f5',
           wordBreak: 'break-word'
         }}>{node.label}</div>
       </div>
@@ -86,12 +86,12 @@ export default function InfoTab({ node, onSwitchToChat }) {
           { label: 'Status', value: node.isGhost ? 'External' : 'Local', color: node.isGhost ? '#475569' : '#0891b2' },
         ].map((stat, i) => (
           <div key={i} style={{
-            background: '#13131f',
-            border: '1px solid #1e1e2e',
+            background: '#1a1a1a',
+            border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '8px',
             padding: '12px'
           }}>
-            <div style={{ fontSize: '11px', color: '#475569', marginBottom: '6px' }}>
+            <div style={{ fontSize: '11px', color: '#6b6b6b', marginBottom: '6px' }}>
               {stat.label}
             </div>
             <div style={{
@@ -109,8 +109,8 @@ export default function InfoTab({ node, onSwitchToChat }) {
         <div style={{ marginBottom: '16px' }}>
           <div style={{
             fontSize: '11px',
-            color: '#475569',
-            fontWeight: '700',
+            color: '#6b6b6b',
+            fontWeight: '600',
             textTransform: 'uppercase',
             letterSpacing: '0.8px',
             marginBottom: '8px'
@@ -119,12 +119,12 @@ export default function InfoTab({ node, onSwitchToChat }) {
             <div key={i} style={{
               padding: '7px 10px',
               marginBottom: '4px',
-              background: '#13131f',
+              background: '#1a1a1a',
               borderRadius: '6px',
-              borderLeft: '2px solid #7c3aed',
-              color: '#a78bfa',
+              borderLeft: '2px solid #e2e2e2',
+              color: '#ffffff',
               fontSize: '12px',
-              fontFamily: 'monospace'
+              fontFamily: "'JetBrains Mono', monospace"
             }}>{imp}</div>
           ))}
         </div>
@@ -135,8 +135,8 @@ export default function InfoTab({ node, onSwitchToChat }) {
         <div style={{ marginBottom: '16px' }}>
           <div style={{
             fontSize: '11px',
-            color: '#475569',
-            fontWeight: '700',
+            color: '#6b6b6b',
+            fontWeight: '600',
             textTransform: 'uppercase',
             letterSpacing: '0.8px',
             marginBottom: '8px'
@@ -145,12 +145,12 @@ export default function InfoTab({ node, onSwitchToChat }) {
             <div key={i} style={{
               padding: '7px 10px',
               marginBottom: '4px',
-              background: '#13131f',
+              background: '#1a1a1a',
               borderRadius: '6px',
-              borderLeft: '2px solid #22c55e',
+              borderLeft: '2px solid #5a9e6f',
               color: '#86efac',
               fontSize: '12px',
-              fontFamily: 'monospace'
+              fontFamily: "'JetBrains Mono', monospace"
             }}>{imp}</div>
           ))}
         </div>
@@ -162,10 +162,10 @@ export default function InfoTab({ node, onSwitchToChat }) {
         style={{
           width: '100%',
           padding: '10px',
-          background: '#7c3aed22',
-          border: '1px solid #7c3aed44',
+          background: '#e2e2e222',
+          border: '1px solid #e2e2e244',
           borderRadius: '8px',
-          color: '#a78bfa',
+          color: '#ffffff',
           cursor: 'pointer',
           fontSize: '13px',
           fontWeight: '600'

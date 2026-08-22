@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./styles/colors.css";
+
 * {
   margin: 0;
   padding: 0;
@@ -10,61 +12,69 @@
   to { transform: rotate(360deg); }
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
 body {
-  background: #0a0a12;
-  color: #f1f5f9;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow: hidden;
 }
 
-.react-flow__background { background: #0a0a12 !important; }
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+}
+
+.glass-heavy {
+  background: var(--glass-bg-heavy);
+  border: 1px solid var(--glass-border-heavy);
+  backdrop-filter: blur(16px);
+}
+
+.react-flow__background { background: var(--bg-main) !important; }
 .react-flow__controls {
-  background: #13131f !important;
-  border: 1px solid #1e1e2e !important;
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
   border-radius: 8px !important;
   box-shadow: none !important;
 }
 .react-flow__controls button {
-  background: #13131f !important;
-  border-bottom: 1px solid #1e1e2e !important;
-  color: #64748b !important;
-  fill: #64748b !important;
+  background: var(--bg-elevated) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+  color: var(--text-muted) !important;
+  fill: var(--text-muted) !important;
 }
 .react-flow__controls button:hover {
-  background: #1a1a2e !important;
-  color: #f1f5f9 !important;
-  fill: #f1f5f9 !important;
+  background: var(--bg-panel) !important;
+  color: var(--accent-bright) !important;
+  fill: var(--accent-bright) !important;
 }
 .react-flow__minimap {
-  background: #13131f !important;
-  border: 1px solid #1e1e2e !important;
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
   border-radius: 8px !important;
 }
-.react-flow__edge-path { stroke: #2a2a3d; }
-.react-flow__edge:hover .react-flow__edge-path { stroke: #7c3aed; }
+.react-flow__edge-path { stroke: var(--glow-accent); }
+.react-flow__edge:hover .react-flow__edge-path { stroke: var(--accent-default); }
 .react-flow__attribution { display: none; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
-/* Animated edge flow — React Flow built-in */
+::-webkit-scrollbar-thumb { background: var(--glass-border-heavy); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-default); }
+
 .react-flow__edge-path {
   stroke-width: 1.5;
   transition: stroke 0.2s ease;
 }
 
-/* Edge hover glow */
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: #7c3aed !important;
+  stroke: var(--accent-default) !important;
   stroke-width: 2px !important;
-  filter: drop-shadow(0 0 6px #7c3aed66);
+  filter: drop-shadow(0 0 6px var(--glow-accent-pulse));
 }
 
-/* Selected edge */
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #a78bfa !important;
+  stroke: var(--accent-bright) !important;
   stroke-width: 2px !important;
 }

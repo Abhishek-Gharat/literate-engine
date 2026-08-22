@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import FileInput from './index'
 
@@ -26,6 +26,19 @@ describe('FileInput Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
+
+  // Renders FileInput on the Runs tab where the runs history lives
+  const renderFileInput = (props = {}) =>
+    render(
+      <FileInput
+        onFilesReady={mockOnFilesReady}
+        onSelectProject={mockOnSelectProject}
+        onLoadRun={mockOnLoadRun}
+        activeTab="Runs"
+        onTabChange={vi.fn()}
+        {...props}
+      />
+    )
 
   test('shows disabled state when no project is selected', async () => {
     listProjects.mockResolvedValue([])
@@ -57,26 +70,15 @@ describe('FileInput Component', () => {
     listProjects.mockResolvedValue([mockProject])
     listRuns.mockImplementation(() => new Promise(() => {})) // Never resolves
 
-    render(
-      <FileInput
-        onFilesReady={mockOnFilesReady}
-        onSelectProject={mockOnSelectProject}
-        onLoadRun={mockOnLoadRun}
-        selectedProject={mockProject}
-      />
-    )
+    renderFileInput({ selectedProject: mockProject })
 
     // Wait for projects to load
     await waitFor(() => {
       expect(screen.queryByText('Loading projects...')).not.toBeInTheDocument()
     })
 
-    // Select a project
-    const projectItem = screen.getByTestId('project-item-1')
-    await userEvent.click(projectItem)
-
-    // Should show loading runs indicator
-    expect(screen.getByText('Loading runs...')).toBeInTheDocument()
+    // Runs are loading (request never resolves), so the loading state stays
+    expect(screen.getByTestId('run-history-loading')).toBeInTheDocument()
   })
 
   test('renders empty runs state correctly', async () => {
@@ -84,50 +86,16 @@ describe('FileInput Component', () => {
     listProjects.mockResolvedValue([mockProject])
     listRuns.mockResolvedValue([])
 
-    render(
-      <FileInput
-        onFilesReady={mockOnFilesReady}
-        onSelectProject={mockOnSelectProject}
-        onLoadRun={mockOnLoadRun}
-        selectedProject={mockProject}
-      />
-    )
+    renderFileInput({ selectedProject: mockProject })
 
     // Wait for runs to load
     await waitFor(() => {
-      expect(screen.queryByText('Loading runs...')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('run-history-loading')).not.toBeInTheDocument()
     })
 
     // Should show empty runs state
     expect(screen.getByTestId('run-history-empty')).toBeInTheDocument()
-    expect(screen.getByText('No Runs Yet')).toBeInTheDocument()
-    expect(screen.getByText('Analyze files to save your first run')).toBeInTheDocument()
-  })
-
-  test('re-analyze button is disabled when no files have been analyzed', async () => {
-    const mockProject = { id: '1', name: 'Test Project', runCount: 0 }
-    listProjects.mockResolvedValue([mockProject])
-    listRuns.mockResolvedValue([])
-
-    render(
-      <FileInput
-        onFilesReady={mockOnFilesReady}
-        onSelectProject={mockOnSelectProject}
-        onLoadRun={mockOnLoadRun}
-        selectedProject={mockProject}
-      />
-    )
-
-    // Wait for runs to load
-    await waitFor(() => {
-      expect(screen.queryByText('Loading runs...')).not.toBeInTheDocument()
-    })
-
-    // Re-analyze button should be disabled
-    const reanalyzeButton = screen.getByTestId('reanalyze-button')
-    expect(reanalyzeButton).toBeInTheDocument()
-    expect(reanalyzeButton).toBeDisabled()
-    expect(reanalyzeButton).toHaveTextContent('Re-analyze Project')
+    expect(screen.getByText('No saved runs yet')).toBeInTheDocument()
   })
 
   test('renders backend error state with retry button', async () => {
@@ -280,18 +248,11 @@ describe('FileInput Component', () => {
     listProjects.mockResolvedValue([mockProject])
     listRuns.mockResolvedValue(mockRuns)
 
-    render(
-      <FileInput
-        onFilesReady={mockOnFilesReady}
-        onSelectProject={mockOnSelectProject}
-        onLoadRun={mockOnLoadRun}
-        selectedProject={mockProject}
-      />
-    )
+    renderFileInput({ selectedProject: mockProject })
 
     // Wait for runs to load
     await waitFor(() => {
-      expect(screen.queryByText('Loading runs...')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('run-history-loading')).not.toBeInTheDocument()
     })
 
     // Should show run items
@@ -318,22 +279,15 @@ describe('FileInput Component', () => {
     listRuns.mockResolvedValue([mockRun])
     getRun.mockResolvedValue(mockRun)
 
-    render(
-      <FileInput
-        onFilesReady={mockOnFilesReady}
-        onSelectProject={mockOnSelectProject}
-        onLoadRun={mockOnLoadRun}
-        selectedProject={mockProject}
-      />
-    )
+    renderFileInput({ selectedProject: mockProject })
 
     // Wait for runs to load
     await waitFor(() => {
-      expect(screen.queryByText('Loading runs...')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('run-history-loading')).not.toBeInTheDocument()
     })
 
-    // Click on run item (button inside li)
-    await userEvent.click(screen.getByTestId('run-item-run-1').querySelector('button'))
+    // Click on run item (button)
+    await userEvent.click(screen.getByTestId('run-item-run-1'))
 
     // Wait for getRun to be called
     await waitFor(() => {
@@ -351,14 +305,7 @@ describe('FileInput Component', () => {
     listProjects.mockResolvedValue([mockProject])
     listRuns.mockRejectedValue(new Error('Network error'))
 
-    render(
-      <FileInput
-        onFilesReady={mockOnFilesReady}
-        onSelectProject={mockOnSelectProject}
-        onLoadRun={mockOnLoadRun}
-        selectedProject={mockProject}
-      />
-    )
+    renderFileInput({ selectedProject: mockProject })
 
     // Wait for error to appear
     await waitFor(() => {

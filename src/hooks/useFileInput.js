@@ -273,7 +273,7 @@ export function useFileInput({
         onLoadRun(run.snapshot, run)
         if (onSelectRun) onSelectRun(run)
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load saved analysis')
     }
   }, [onLoadRun, onSelectRun])

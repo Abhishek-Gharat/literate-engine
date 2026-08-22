@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { 
   DEMO_COLORS, 
   DEMO_SPACING, 
@@ -24,7 +24,7 @@ const DEPTH_OPTIONS = [
   { value: '3', label: '3 levels' }
 ]
 
-export function GraphFilters({ 
+export function GraphFilters({
   nodes = [],
   filteredTypes = [],
   onToggleType,
@@ -32,8 +32,7 @@ export function GraphFilters({
   onDepthChange,
   issues = [],
   showIssues = true,
-  onToggleIssues,
-  isMobile = false
+  onToggleIssues
 }) {
   const containerStyle = {
     width: '100%',

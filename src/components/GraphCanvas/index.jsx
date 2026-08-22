@@ -122,7 +122,7 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
   )
 
   return (
-    <div ref={wrapperRef} style={{ width: '100%', height: '100%', background: '#0a0a12' }}>
+    <div ref={wrapperRef} style={{ width: '100%', height: '100%', background: '#0a0a0a' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -139,7 +139,7 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
         nodesDraggable={true}
         defaultEdgeOptions={{ type: 'animatedEdge' }}
       >
-        <Background color="#1e1e2e" gap={24} size={1} />
+        <Background color="rgba(255,255,255,0.06)" gap={24} size={1} />
 
         {/* Layout Toggle Button */}
         <Panel position="bottom-center">
@@ -147,10 +147,10 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
             onClick={toggleLayout}
             style={{
               padding: '8px 20px',
-              background: '#13131f',
-              border: '1px solid #2a2a3d',
+              background: '#1a1a1a',
+              border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '20px',
-              color: '#94a3b8',
+              color: '#a0a0a0',
               cursor: 'pointer',
               fontSize: '12px',
               fontWeight: '600',
@@ -161,12 +161,12 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
               transition: 'all 0.2s',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#7c3aed'
-              e.currentTarget.style.color = '#a78bfa'
+              e.currentTarget.style.borderColor = '#e2e2e2'
+              e.currentTarget.style.color = '#ffffff'
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = '#2a2a3d'
-              e.currentTarget.style.color = '#94a3b8'
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+              e.currentTarget.style.color = '#a0a0a0'
             }}
           >
             <span style={{ fontSize: '14px' }}>
@@ -177,23 +177,23 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
         </Panel>
 
         <Controls style={{
-          background: '#13131f',
-          border: '1px solid #1e1e2e',
+          background: '#1a1a1a',
+          border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: '8px',
           boxShadow: 'none'
         }} />
         <MiniMap
           style={{
-            background: '#13131f',
-            border: '1px solid #1e1e2e',
+            background: '#1a1a1a',
+            border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '8px'
           }}
           nodeColor={n => {
             const colors = {
-              root: '#7c3aed', entry: '#f59e0b', page: '#0891b2',
-              component: '#059669', hook: '#d97706', ghost: '#475569'
+              root: '#e2e2e2', entry: '#4a7c9b', page: '#4a7c9b',
+              component: '#5a9e6f', hook: '#b07a8a', ghost: '#8a8a8a'
             }
-            return colors[n.data?.nodeType] || '#6366f1'
+            return colors[n.data?.nodeType] || '#8b6fb0'
           }}
         />
       </ReactFlow>

@@ -2,12 +2,12 @@ import { getSmoothStepPath } from '@xyflow/react'
 
 export default function AnimatedEdge({
   id, sourceX, sourceY, targetX, targetY,
-  sourcePosition, targetPosition, data, markerEnd,
+  sourcePosition, targetPosition, data,
 }) {
   const isCyclic = data?.cyclic || false
-  const dotColor = isCyclic ? '#f87171' : '#818cf8'
-  const lineColor = isCyclic ? '#f8717133' : '#818cf833'
-  const glowColor = isCyclic ? '#ef444422' : '#6366f122'
+  const dotColor = isCyclic ? '#b07a8a' : 'rgba(255,255,255,0.5)'
+  const lineColor = isCyclic ? '#b07a8a33' : 'rgba(255,255,255,0.15)'
+  const glowColor = isCyclic ? '#b07a8a22' : 'rgba(255,255,255,0.08)'
 const duration = isCyclic ? '6s' : '10s'
   const uid = `edge-${id}`.replace(/[^a-zA-Z0-9-]/g, '-')
 

@@ -35,13 +35,11 @@ export function DemoGraphView({
   onBack,
   findings = []
 }) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  const [nodes, , onNodesChange] = useNodesState(initialNodes)
+  const [edges, , onEdgesChange] = useEdgesState(initialEdges)
   const [selectedNode, setSelectedNode] = useState(null)
   const [filteredTypes, setFilteredTypes] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [depthFilter, setDepthFilter] = useState('all')
-  const [showIssues, setShowIssues] = useState(true)
 
   // Filter nodes based on search and type filters
   const filteredNodes = useMemo(() => {
@@ -71,13 +69,13 @@ export function DemoGraphView({
     })
   }, [edges, nodes])
 
-  const handleNodeClick = useCallback((event, node) => {
+  function handleNodeClick(event, node) {
     setSelectedNode(node.data)
-  }, [])
+  }
 
-  const handlePaneClick = useCallback(() => {
+  function handlePaneClick() {
     setSelectedNode(null)
-  }, [])
+  }
 
   const toggleTypeFilter = useCallback((type) => {
     setFilteredTypes(prev => 

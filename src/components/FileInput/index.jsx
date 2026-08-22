@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useCallback } from 'react'
 import ProjectsSidebar from '../projects/ProjectsSidebar'
 import UploadCenter from '../uploads/UploadCenter'
 import RunsSidebar from '../runs/RunsSidebar'
@@ -108,8 +108,8 @@ export default function FileInput({
     width: '100%',
     minWidth: 0,
     height: '100vh',
-    background: '#0b1424',
-    color: '#f1f5f9',
+    background: '#000000',
+    color: '#ededed',
     fontFamily: 'Inter, ui-sans-serif, system-ui',
     overflow: 'hidden'
   }}
@@ -130,12 +130,12 @@ export default function FileInput({
         minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
-        background: '#0b1424'
+        background: '#000000'
       }}>
         <header style={{
           height: '64px',
           flexShrink: 0,
-          borderBottom: '1px solid #3b465d',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
           display: 'flex',
           alignItems: 'center',
           padding: '0 32px',
@@ -144,10 +144,10 @@ export default function FileInput({
         }}>
           <h1 style={{
             margin: 0,
-            color: '#ead7ff',
+            color: '#ffffff',
             fontSize: '28px',
             fontWeight: '800',
-            textShadow: '2px 2px 0 #2a1c4a'
+            textShadow: 'none'
           }}>Dashboard</h1>
           <nav style={{ display: 'flex', alignItems: 'stretch', gap: '32px', height: '100%' }}>
             {tabs.map(tab => (
@@ -160,7 +160,7 @@ export default function FileInput({
                   padding: '0',
                   background: 'transparent',
                   border: 'none',
-                  color: activeTab === tab ? '#ead7ff' : '#d7d2e6',
+                  color: activeTab === tab ? '#ffffff' : '#a1a1a1',
                   cursor: 'pointer',
                   fontSize: '16px',
                   fontWeight: activeTab === tab ? '800' : '600'
@@ -174,7 +174,7 @@ export default function FileInput({
                     right: 0,
                     bottom: '0',
                     height: '2px',
-                    background: '#d8b4fe'
+                    background: '#ffffff'
                   }} />
                 )}
               </button>
@@ -185,7 +185,7 @@ export default function FileInput({
             display: 'flex',
             alignItems: 'center',
             gap: '20px',
-            color: '#ece8ff',
+            color: '#ededed',
             fontSize: '24px'
           }}>
             <span>♢</span>
@@ -193,10 +193,10 @@ export default function FileInput({
             <div style={{
               width: '40px',
               height: '40px',
-              border: '1px solid #3b465d',
+              border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '10px',
-              background: '#10202a',
-              boxShadow: 'inset 0 0 0 1px #193746'
+              background: '#111111',
+              boxShadow: 'none'
             }} />
           </div>
         </header>
@@ -223,8 +223,8 @@ export default function FileInput({
             }}>
               <RunsSidebar
                 runs={runs}
-                runsLoading={runsLoading}
-                runsError={runsError}
+                loading={runsLoading}
+                error={runsError}
                 selectedProject={selectedProject}
                 selectedRunId={selectedRunId}
                 isAnalyzing={isAnalyzing}

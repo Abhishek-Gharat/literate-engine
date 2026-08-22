@@ -41,28 +41,6 @@ function saveLocalProjects(projects) {
   }
 }
 
-function fetchWithTimeout(url, options, timeout = REQUEST_TIMEOUT) {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-  const opts = {
-    ...options,
-    signal: options?.signal ? options.signal : controller.signal,
-  }
-
-  if (!opts.signal || opts.signal === controller.signal) {
-    opts.signal = controller.signal
-  }
-
-  return fetch(url, opts).finally(() => clearTimeout(timeoutId))
-}
-
-function timeoutPromise(timeout) {
-  return new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Request timed out')), timeout)
-  )
-}
-
 function handleApiError(error) {
   if (error.name === 'TypeError' && error.message.includes('fetch')) {
     return new Error('Cannot connect to server. Please check if the backend is running.')
@@ -78,7 +56,7 @@ function handleApiError(error) {
 
 // Try a request with fallback to a longer timeout for Render cold starts
 async function fetchWithColdStartFallback(url, options = {}) {
-  const { timeout, retries, ...fetchOptions } = options
+  const { timeout, ...fetchOptions } = options
   const activeTimeout = timeout || (hasHadSuccessfulBackendCall ? REQUEST_TIMEOUT : 20000)
   const controller = new AbortController()
 

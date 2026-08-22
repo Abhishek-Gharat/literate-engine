@@ -7,13 +7,11 @@ import { useProjects } from '../../hooks/useProjects'
  * @param {string|null} props.selectedProjectId - Currently selected project ID
  * @param {boolean} props.isAnalyzing - Whether analysis is in progress
  * @param {Function} props.onSelectProject - Callback when project is selected
- * @param {Function} props.onCreateClick - Callback to open create modal
  */
 export default function ProjectList({
   selectedProjectId,
   isAnalyzing,
-  onSelectProject,
-  onCreateClick
+  onSelectProject
 }) {
   const { projects, loading, error, loadProjects } = useProjects({ onSelectProject })
 
@@ -47,9 +45,9 @@ export default function ProjectList({
             style={{
               padding: '6px 12px',
               background: 'transparent',
-              border: '1px solid #7c3aed',
+              border: '1px solid #e2e2e2',
               borderRadius: '6px',
-              color: '#7c3aed',
+              color: '#e2e2e2',
               cursor: 'pointer',
               fontSize: '12px'
             }}
@@ -79,14 +77,14 @@ export default function ProjectList({
               borderRadius: '6px',
               cursor: isAnalyzing ? 'not-allowed' : 'pointer',
               marginBottom: '4px',
-              background: selectedProjectId === project.id ? '#7c3aed22' : 'transparent',
-              border: selectedProjectId === project.id ? '1px solid #7c3aed44' : '1px solid transparent',
+              background: selectedProjectId === project.id ? '#e2e2e222' : 'transparent',
+              border: selectedProjectId === project.id ? '1px solid #e2e2e244' : '1px solid transparent',
               opacity: isAnalyzing ? 0.5 : 1,
               transition: 'all 0.15s'
             }}
             onMouseEnter={e => {
               if (!isAnalyzing && selectedProjectId !== project.id) {
-                e.currentTarget.style.background = '#13131f'
+                e.currentTarget.style.background = '#1a1a1a'
               }
             }}
             onMouseLeave={e => {

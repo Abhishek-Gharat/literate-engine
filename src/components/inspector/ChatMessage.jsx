@@ -18,10 +18,10 @@ export default function ChatMessage({ msg }) {
         <div style={{
           maxWidth: '82%',
           padding: '10px 14px',
-          background: '#7c3aed',
+          background: '#ffffff',
           borderRadius: '16px 16px 4px 16px'
         }}>
-          <span style={{ fontSize: '13px', color: '#fff', lineHeight: '1.6' }}>
+          <span style={{ fontSize: '13px', color: '#000000', lineHeight: '1.6' }}>
             {msg.content}
           </span>
         </div>
@@ -40,7 +40,7 @@ export default function ChatMessage({ msg }) {
         width: '26px',
         height: '26px',
         flexShrink: 0,
-        background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+        background: 'linear-gradient(135deg, #ffffff, #a1a1a1)',
         borderRadius: '6px',
         display: 'flex',
         alignItems: 'center',
@@ -51,8 +51,8 @@ export default function ChatMessage({ msg }) {
       <div style={{
         maxWidth: '82%',
         padding: '10px 14px',
-        background: '#13131f',
-        border: '1px solid #1e1e2e',
+        background: '#1a1a1a',
+        border: '1px solid rgba(255,255,255,0.12)',
         borderRadius: '4px 16px 16px 16px'
       }}>
         <RenderMessage text={msg.content} />
@@ -61,7 +61,7 @@ export default function ChatMessage({ msg }) {
             display: 'inline-block',
             width: '2px',
             height: '14px',
-            background: '#818cf8',
+            background: '#e2e2e2',
             marginLeft: '2px',
             verticalAlign: 'middle',
             animation: 'blink 1s ease infinite'
@@ -91,21 +91,21 @@ function RenderMessage({ text }) {
         return (
           <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '5px' }}>
             {isBullet && (
-              <span style={{ color: '#818cf8', flexShrink: 0, marginTop: '2px' }}>•</span>
+              <span style={{ color: '#ffffff', flexShrink: 0, marginTop: '2px' }}>•</span>
             )}
-            <span style={{ fontSize: '13px', lineHeight: '1.7', color: '#cbd5e1' }}>
+            <span style={{ fontSize: '13px', lineHeight: '1.7', color: '#a1a1a1' }}>
               {parts.map((part, j) => {
                 if (j % 3 === 1) return (
-                  <strong key={j} style={{ color: '#f1f5f9', fontWeight: '600' }}>{part}</strong>
+                  <strong key={j} style={{ color: '#ededed', fontWeight: '500' }}>{part}</strong>
                 )
                 if (j % 3 === 2) return (
                   <code key={j} style={{
-                    background: '#1e1e3f',
-                    color: '#a78bfa',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#ffffff',
                     padding: '1px 6px',
                     borderRadius: '4px',
                     fontSize: '12px',
-                    fontFamily: 'monospace'
+                    fontFamily: "'JetBrains Mono', monospace"
                   }}>{part}</code>
                 )
                 return <span key={j}>{part}</span>

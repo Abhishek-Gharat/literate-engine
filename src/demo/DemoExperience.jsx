@@ -34,7 +34,6 @@ const VIEWS = {
  */
 export function DemoExperience({ onBackToApp }) {
   const [currentView, setCurrentView] = useState(VIEWS.ENTRY)
-  const [analysisResult, setAnalysisResult] = useState(null)
 
   const handleTryDemo = () => {
     setCurrentView(VIEWS.LOADING)
@@ -42,7 +41,6 @@ export function DemoExperience({ onBackToApp }) {
 
   const handleLoadingComplete = () => {
     // Simulate loading complete
-    setAnalysisResult(DEMO_ANALYSIS_RESULT)
     setCurrentView(VIEWS.OVERVIEW)
   }
 

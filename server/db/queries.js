@@ -62,37 +62,33 @@ export function createAnalysisRun(projectId, snapshot, stats, unresolvedImports,
     throw err
   }
 
-  try {
-    const stmt = db.prepare(`
+  const stmt = db.prepare(`
       INSERT INTO analysis_runs (id, project_id, created_at, snapshot, stats, unresolved_imports, analysis_errors)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
 
-    stmt.run(
-      id,
-      projectId,
-      now,
-      JSON.stringify(snapshot),
-      JSON.stringify(stats),
-      JSON.stringify(unresolvedImports),
-      JSON.stringify(analysisErrors)
-    )
+  stmt.run(
+    id,
+    projectId,
+    now,
+    JSON.stringify(snapshot),
+    JSON.stringify(stats),
+    JSON.stringify(unresolvedImports),
+    JSON.stringify(analysisErrors)
+  )
 
-    // Update project's updated_at
-    const updateStmt = db.prepare(`UPDATE projects SET updated_at = ? WHERE id = ?`)
-    updateStmt.run(now, projectId)
+  // Update project's updated_at
+  const updateStmt = db.prepare(`UPDATE projects SET updated_at = ? WHERE id = ?`)
+  updateStmt.run(now, projectId)
 
-    return {
-      id,
-      projectId,
-      createdAt: now,
-      snapshot,
-      stats,
-      unresolvedImports,
-      analysisErrors,
-    }
-  } catch (error) {
-    throw error
+  return {
+    id,
+    projectId,
+    createdAt: now,
+    snapshot,
+    stats,
+    unresolvedImports,
+    analysisErrors,
   }
 }
 

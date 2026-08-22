@@ -9,8 +9,8 @@ import StatRow from './StatRow'
  * @param {Object} props.stats - Run statistics
  */
 export default function RunDetailStats({ stats }) {
-  const totalFiles = stats?.totalFiles || 0
-  const totalComponents = stats?.totalComponents || 0
+  const totalFiles = stats?.totalFiles
+  const totalComponents = stats?.totalComponents
 
   return (
     <div style={{ marginBottom: '24px' }}>
