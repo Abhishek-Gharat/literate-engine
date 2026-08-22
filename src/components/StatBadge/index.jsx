@@ -1,3 +1,4 @@
+import React from 'react'
 import { COLORS, TYPOGRAPHY } from '../../styles/constants.js'
 
 /**

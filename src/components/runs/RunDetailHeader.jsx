@@ -1,13 +1,31 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 /**
  * RunDetailHeader - Header section for run detail panel
- * 
+ *
  * @param {Object} props
  * @param {string} props.runId - Run ID
  * @param {string|null} props.createdAt - Creation date
  */
 export default function RunDetailHeader({ runId, createdAt }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/share/${runId}`
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = url
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1600)
+  }
+
   return (
     <div
       style={{
@@ -23,10 +41,28 @@ export default function RunDetailHeader({ runId, createdAt }) {
           fontWeight: '600',
           textTransform: 'uppercase',
           letterSpacing: '1px',
-          marginBottom: '6px'
+          marginBottom: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
         }}
       >
-        Run Details
+        <span>Run Details</span>
+        <button
+          onClick={handleCopyLink}
+          data-testid="copy-share-link"
+          title="Copy public read-only link to this run"
+          style={{
+            background: copied ? '#22c55e22' : 'rgba(255,255,255,0.08)',
+            border: `1px solid ${copied ? '#22c55e55' : 'rgba(255,255,255,0.15)'}`,
+            borderRadius: '5px',
+            color: copied ? '#4ade80' : '#94a3b8',
+            fontSize: '10px',
+            fontWeight: '600',
+            padding: '2px 8px',
+            cursor: 'pointer'
+          }}
+        >{copied ? '✓ Link copied' : '🔗 Share'}</button>
       </div>
       <div
         data-testid="run-detail-id"
