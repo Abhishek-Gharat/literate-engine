@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { compareRuns, getPreviousRun } from '../../utils/runComparison'
+import GraphDiffModal from './GraphDiffModal'
 
 function formatDate(dateStr) {
   if (!dateStr) return 'Unknown'
@@ -16,6 +17,7 @@ function formatDate(dateStr) {
 
 export default function RunComparisonPanel({ runs, currentRun, selectedProject }) {
   const [showDetails, setShowDetails] = useState(false)
+  const [showGraphDiff, setShowGraphDiff] = useState(false)
 
   if (!currentRun || !selectedProject) {
     return null
@@ -181,9 +183,29 @@ export default function RunComparisonPanel({ runs, currentRun, selectedProject }
           </div>
         </div>
 
-        {/* Show details toggle */}
-        <button
-          onClick={() => setShowDetails(!showDetails)}
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowGraphDiff(true)}
+            data-testid="graph-diff-button"
+            style={{
+              fontSize: '11px',
+              fontWeight: '600',
+              color: '#c4b5fd',
+              background: 'rgba(124,58,237,0.12)',
+              border: '1px solid rgba(196,181,253,0.3)',
+              cursor: 'pointer',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              transition: 'all 150ms'
+            }}
+            onMouseEnter={(e) => { e.target.style.background = 'rgba(124,58,237,0.25)' }}
+            onMouseLeave={(e) => { e.target.style.background = 'rgba(124,58,237,0.12)' }}
+          >
+            ⚡ Graph Diff
+          </button>
+          <button
+            onClick={() => setShowDetails(!showDetails)}
           style={{
             fontSize: '11px',
             color: '#94a3b8',
@@ -199,7 +221,17 @@ export default function RunComparisonPanel({ runs, currentRun, selectedProject }
         >
           {showDetails ? 'Hide details' : 'Show details'}
         </button>
+        </div>
       </div>
+
+      {/* Graph diff overlay */}
+      {showGraphDiff && (
+        <GraphDiffModal
+          previousRun={previousRun}
+          currentRun={currentRun}
+          onClose={() => setShowGraphDiff(false)}
+        />
+      )}
 
       {/* Expanded details */}
       {showDetails && (
