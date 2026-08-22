@@ -2,12 +2,15 @@ import React from 'react'
 
 /**
  * InfoTab - Node information display
- * 
+ *
  * @param {Object} props
  * @param {Object} props.node - Node data
+ * @param {Object|null} props.impact - Blast radius result for the selected node
+ * @param {boolean} props.showImpact - Whether impact highlighting is active on the graph
+ * @param {Function} props.onToggleImpact - Callback to toggle graph impact highlighting
  * @param {Function} props.onSwitchToChat - Callback to switch to chat tab
  */
-export default function InfoTab({ node, onSwitchToChat }) {
+export default function InfoTab({ node, impact, showImpact, onToggleImpact, onSwitchToChat }) {
   if (!node) {
     return (
       <div style={{
@@ -103,6 +106,95 @@ export default function InfoTab({ node, onSwitchToChat }) {
           </div>
         ))}
       </div>
+
+      {/* Blast radius */}
+      {impact && (
+        <div style={{
+          background: '#1a1a1a',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: '8px',
+          padding: '12px',
+          marginBottom: '16px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <span style={{
+              fontSize: '11px',
+              color: '#6b6b6b',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.8px'
+            }}>Blast Radius</span>
+            <span style={{
+              fontSize: '12px',
+              fontWeight: '700',
+              fontFamily: 'monospace',
+              color: impact.total > 0 ? '#f5a623' : '#22c55e'
+            }}>{impact.total} file{impact.total === 1 ? '' : 's'}</span>
+          </div>
+
+          <div style={{ fontSize: '11px', color: '#6b6b6b', marginBottom: impact.total > 0 ? '10px' : 0 }}>
+            {impact.total === 0
+              ? 'Nothing imports this file — safe to change.'
+              : `${impact.directCount} direct · ${impact.indirectCount} transitive · up to ${impact.maxDepth} step${impact.maxDepth === 1 ? '' : 's'} away`}
+          </div>
+
+          {impact.ordered.length > 0 && (
+            <div style={{ maxHeight: '140px', overflowY: 'auto', marginBottom: impact.total > 0 && onToggleImpact ? '10px' : 0 }}>
+              {impact.ordered.map((entry) => (
+                <div key={entry.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '5px 8px',
+                  marginBottom: '3px',
+                  background: '#111111',
+                  borderRadius: '5px',
+                  fontSize: '11px'
+                }}>
+                  <span style={{
+                    flexShrink: 0,
+                    width: '22px',
+                    textAlign: 'center',
+                    padding: '1px 0',
+                    borderRadius: '4px',
+                    fontSize: '9px',
+                    fontWeight: '700',
+                    fontFamily: 'monospace',
+                    color: entry.depth === 1 ? '#f5a623' : '#94a3b8',
+                    border: `1px solid ${entry.depth === 1 ? '#f5a62355' : '#94a3b833'}`
+                  }}>d{entry.depth}</span>
+                  <span style={{
+                    color: entry.depth === 1 ? '#ffffff' : '#a1a1a1',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>{entry.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {impact.total > 0 && onToggleImpact && (
+            <button
+              onClick={onToggleImpact}
+              style={{
+                width: '100%',
+                padding: '8px',
+                background: showImpact ? '#f5a62322' : '#111111',
+                border: showImpact ? '1px solid #f5a62366' : '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '6px',
+                color: showImpact ? '#f5a623' : '#ededed',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600'
+              }}
+            >
+              {showImpact ? '✦ Highlighting on graph — click to hide' : 'Show impact on graph'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Imports */}
       {node.imports?.length > 0 && (

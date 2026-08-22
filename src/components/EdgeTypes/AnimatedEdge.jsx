@@ -5,9 +5,23 @@ export default function AnimatedEdge({
   sourcePosition, targetPosition, data,
 }) {
   const isCyclic = data?.cyclic || false
-  const dotColor = isCyclic ? '#b07a8a' : 'rgba(255,255,255,0.5)'
-  const lineColor = isCyclic ? '#b07a8a33' : 'rgba(255,255,255,0.15)'
-  const glowColor = isCyclic ? '#b07a8a22' : 'rgba(255,255,255,0.08)'
+  const isImpact = data?.impact || false
+  const isDimmed = data?.dimmed || false
+  const dotColor = isImpact
+    ? '#f5a623'
+    : isDimmed
+      ? 'rgba(255,255,255,0.12)'
+      : isCyclic ? '#b07a8a' : 'rgba(255,255,255,0.5)'
+  const lineColor = isImpact
+    ? '#f5a62388'
+    : isDimmed
+      ? 'rgba(255,255,255,0.05)'
+      : isCyclic ? '#b07a8a33' : 'rgba(255,255,255,0.15)'
+  const glowColor = isImpact
+    ? '#f5a62322'
+    : isDimmed
+      ? 'transparent'
+      : isCyclic ? '#b07a8a22' : 'rgba(255,255,255,0.08)'
 const duration = isCyclic ? '6s' : '10s'
   const uid = `edge-${id}`.replace(/[^a-zA-Z0-9-]/g, '-')
 

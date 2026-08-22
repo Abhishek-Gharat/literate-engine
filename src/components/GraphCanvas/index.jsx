@@ -55,7 +55,7 @@ function getLayoutedElements(nodes, edges, direction = 'TB') {
 }
 
 // Inner component
-function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats, cyclicEdges }, ref) {
+function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats, cyclicEdges, highlightIds }, ref) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const { fitView } = useReactFlow()
@@ -101,20 +101,35 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
   }, [direction, edges, fitView, setNodes, nodes])
 
   useEffect(() => {
-    if (!searchTerm) {
-      setNodes(nds => nds.map(n => ({
-        ...n, style: { ...n.style, opacity: undefined }
-      })))
-      return
-    }
-    setNodes(nds => nds.map(n => ({
-      ...n,
-      style: {
-        ...n.style,
-        opacity: n.id.toLowerCase().includes(searchTerm.toLowerCase()) ? 1 : 0.15
+    const searchActive = Boolean(searchTerm)
+    const impactSet = Array.isArray(highlightIds) && highlightIds.length > 0
+      ? new Set(highlightIds)
+      : null
+    const impactActive = Boolean(impactSet)
+
+    setNodes(nds => nds.map(n => {
+      const matchesSearch = !searchActive || n.id.toLowerCase().includes(searchTerm.toLowerCase())
+      const inImpact = !impactActive || impactSet.has(n.id)
+      const visible = matchesSearch && inImpact
+      return {
+        ...n,
+        style: {
+          ...n.style,
+          opacity: (searchActive || impactActive) ? (visible ? 1 : 0.15) : undefined,
+          boxShadow: (impactActive && visible) ? '0 0 0 2px rgba(245,166,35,0.45)' : undefined,
+        }
       }
-    })))
-  }, [searchTerm, setNodes])
+    }))
+
+    setEdges(eds => eds.map(e => {
+      if (!impactActive) {
+        if (!e.data?.impact && !e.data?.dimmed) return e
+        return { ...e, data: { ...e.data, impact: false, dimmed: false } }
+      }
+      const related = impactSet.has(e.source) && impactSet.has(e.target)
+      return { ...e, data: { ...e.data, impact: related, dimmed: !related } }
+    }))
+  }, [searchTerm, highlightIds, setNodes, setEdges])
 
   const onConnect = useCallback(
     (params) => setEdges(eds => addEdge({ ...params, animated: true }, eds)),

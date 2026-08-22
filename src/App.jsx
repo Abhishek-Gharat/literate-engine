@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import FileInput from './components/FileInput'
 import GraphCanvas from './components/GraphCanvas'
 import NodeInspector from './components/NodeInspector'
@@ -11,6 +11,7 @@ import { useApiKey } from './hooks/useApiKey'
 import { StatsDisplay } from './components/StatBadge'
 import { ImportList, EmptyState } from './components/NodeCard'
 import { getNodeColor } from './utils/nodeColors.js'
+import { computeBlastRadius } from './utils/impactAnalysis.js'
 import { COLORS, SPACING, LAYOUT, TYPOGRAPHY, NODE_LEGEND_ITEMS } from './styles/constants.js'
 import { DemoExperience } from './demo/DemoExperience.jsx'
 
@@ -29,6 +30,7 @@ function App() {
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false)
   const [hasAutoOpenedIssues, setHasAutoOpenedIssues] = useState(false)
   const [sidebarTab, setSidebarTab] = useState('info')
+  const [showImpact, setShowImpact] = useState(false)
   const graphCanvasRef = useRef(null)
 
   const handleFilesReady = useCallback(async (files, projectId) => {
@@ -73,6 +75,7 @@ function App() {
   const handleBackToInput = () => {
     setGraphReady(false)
     setDemoMode(false)
+    setShowImpact(false)
     closeInspector()
     resetGraph()
     // Keep activeTab as-is - if user was on Runs tab, they return there
@@ -81,6 +84,16 @@ function App() {
   const handleNodeClick = (node) => {
     selectNode(node?.data || node)
   }
+
+  const blastRadius = useMemo(() => {
+    if (!selectedNode) return null
+    return computeBlastRadius(selectedNode.id || selectedNode.label, nodes)
+  }, [selectedNode, nodes])
+
+  const highlightIds = useMemo(() => {
+    if (!showImpact || !blastRadius) return null
+    return [blastRadius.sourceId, ...blastRadius.ordered.map(entry => entry.id)]
+  }, [showImpact, blastRadius])
 
   const handleShowInspector = () => {
     // Opens inspector without changing selected node
@@ -271,8 +284,9 @@ function App() {
 
         {/* ── GRAPH AREA ── */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-          <GraphCanvas
-            ref={graphCanvasRef}
+      <GraphCanvas
+        ref={graphCanvasRef}
+        highlightIds={highlightIds}
             initialNodes={nodes}
             initialEdges={edges}
             onNodeClick={handleNodeClick}
@@ -525,6 +539,9 @@ function App() {
           node={selectedNode}
           depMap={depMap}
           stats={stats}
+          impact={blastRadius}
+          showImpact={showImpact}
+          onToggleImpact={() => setShowImpact(value => !value)}
           messages={messages}
           loading={loading}
           error={error}

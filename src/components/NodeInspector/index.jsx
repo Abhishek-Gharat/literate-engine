@@ -17,6 +17,9 @@ export default function NodeInspector({
   loading,
   error,
   apiKey,
+  impact,
+  showImpact,
+  onToggleImpact,
   onSendMessage,
   onClearChat,
   onApiKeyChange,
@@ -272,6 +275,9 @@ export default function NodeInspector({
         ) : (
           <InfoTab
             node={node}
+            impact={impact}
+            showImpact={showImpact}
+            onToggleImpact={onToggleImpact}
             onSwitchToChat={() => setTab('chat')}
           />
         )}
