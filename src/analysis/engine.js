@@ -5,6 +5,7 @@ import {
   resolveImportRecords,
 } from '../utils/importParser.js'
 import { detectCycles, isCyclicEdge } from '../utils/cycleDetector.js'
+import { computeHealthScore } from '../utils/healthScore.js'
 
 const SOURCE_EXTENSIONS = /\.(jsx?|tsx?)$/
 const CONFIG_FILES = /(^|\/)(tsconfig|jsconfig)\.json$/i
@@ -131,6 +132,11 @@ export function analyzeProject(files, options = {}) {
   const nodes = buildNodes(depMap, fileNames)
   const edges = buildEdges(depMap, cyclicEdges, resolved.records)
   const unresolvedImports = buildUnresolvedImports(resolved.records)
+  const health = computeHealthScore({
+    nodes,
+    cyclicEdges,
+    unresolvedImports: unresolvedImports.length,
+  })
 
   return {
     nodes,
@@ -151,6 +157,8 @@ export function analyzeProject(files, options = {}) {
       cyclesFound: countUniqueCycles(cyclicEdges),
       unresolvedImports: unresolvedImports.length,
       analysisErrors: analysisErrors.length,
+      healthScore: health.score,
+      healthGrade: health.grade,
     },
     unresolvedImports,
     analysisErrors,

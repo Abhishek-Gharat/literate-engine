@@ -105,6 +105,16 @@ export default function RunComparisonPanel({ runs, currentRun, selectedProject }
     })
   }
 
+  // Health score summary
+  const healthChange = metricChanges.healthScore
+  if (typeof healthChange === 'number' && healthChange !== 0) {
+    summaries.push({
+      label: 'Health',
+      value: healthChange > 0 ? `+${healthChange}` : `${healthChange}`,
+      color: healthChange > 0 ? '#4ade80' : '#f87171'
+    })
+  }
+
   // Circular deps summary
   if (hasCycleChanges) {
     if (cycleChanges.new.length > 0) {
@@ -218,9 +228,15 @@ export default function RunComparisonPanel({ runs, currentRun, selectedProject }
           {/* Metrics */}
           {(metricChanges.totalComponents !== 0 ||
             metricChanges.totalHooks !== 0 ||
-            metricChanges.totalContexts !== 0) && (
+            metricChanges.totalContexts !== 0 ||
+            typeof healthChange === 'number') && (
             <DetailSection>
               <DetailLabel>Structure</DetailLabel>
+              {typeof healthChange === 'number' && (
+                <DetailItem color={healthChange > 0 ? '#4ade80' : '#f87171'}>
+                  Health: {healthChange > 0 ? '+' : ''}{healthChange}
+                </DetailItem>
+              )}
               {metricChanges.totalComponents !== 0 && (
                 <DetailItem color={metricChanges.totalComponents > 0 ? '#4ade80' : '#f87171'}>
                   Components: {metricChanges.totalComponents > 0 ? '+' : ''}{metricChanges.totalComponents}

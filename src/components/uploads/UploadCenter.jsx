@@ -1,5 +1,35 @@
 import React, { useRef } from 'react'
 import { findEntryPoints } from '../../utils/nodeTypeClassifier'
+import { computeHealthScore, getHealthColor } from '../../utils/healthScore'
+
+/**
+ * getRunHealth - Prefer recomputing from the snapshot (richer breakdown),
+ * fall back to cached stats for runs without one.
+ */
+function getRunHealth(run) {
+  const stats = run?.stats || {}
+  const snapshot = run?.snapshot || {}
+  const nodes = snapshot.nodes || []
+
+  if (nodes.length > 0 || typeof stats.healthScore !== 'number') {
+    const result = computeHealthScore({
+      nodes,
+      cyclicEdges: snapshot.cyclicEdges || [],
+      unresolvedImports: (run?.unresolvedImports || []).length
+    })
+    if (result.score !== null) {
+      return { score: result.score, grade: result.grade, ...result.metrics }
+    }
+  }
+
+  return {
+    score: typeof stats.healthScore === 'number' ? stats.healthScore : null,
+    grade: stats.healthGrade || null,
+    cycles: stats.cyclesFound ?? 0,
+    orphans: 0,
+    godComponents: 0
+  }
+}
 
 /**
  * UploadCenter - Center panel with upload controls
@@ -33,6 +63,12 @@ export default function UploadCenter({
   const snapshotFiles = latestRun?.snapshot?.nodes?.map(n => n.id) || []
   const entryPoints = findEntryPoints(snapshotFiles)
   const hasEntryPoints = entryPoints.length > 0
+  const latestHealth = latestRun ? getRunHealth(latestRun) : null
+  const healthTrend = (runs || [])
+    .slice(0, 10)
+    .reverse()
+    .map(run => getRunHealth(run).score)
+    .filter(score => typeof score === 'number')
 
   const handleFileChange = async (e) => {
     try {
@@ -268,6 +304,7 @@ export default function UploadCenter({
       }}>
         <MetricCard title="Files Analyzed" value={filesAnalyzed} suffix="files" icon="▤" />
         <MetricCard title="Components Found" value={componentsFound} suffix="components" icon="□" />
+        <HealthCard health={latestHealth} trend={healthTrend} />
         <div style={{
           minHeight: '72px',
           background: '#111111',
@@ -568,6 +605,115 @@ export default function UploadCenter({
         </div>
       )}
     </div>
+  )
+}
+
+function HealthCard({ health, trend = [] }) {
+  const score = health?.score ?? null
+  const hasScore = typeof score === 'number'
+  const color = getHealthColor(score)
+
+  return (
+    <div style={{
+      minHeight: '72px',
+      background: '#111111',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '8px',
+      padding: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      boxSizing: 'border-box'
+    }}>
+      <div>
+        <div style={{
+          color: '#a1a1a1',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontSize: '12px',
+          fontWeight: '800',
+          letterSpacing: '2px',
+          textTransform: 'uppercase',
+          marginBottom: '6px'
+        }}>Architecture Health</div>
+        {hasScore ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <strong style={{ color, fontSize: '22px', lineHeight: 1 }}>{score}</strong>
+              <span style={{ color: '#a1a1a1', fontSize: '13px' }}>/ 100</span>
+              {health?.grade && (
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  padding: '1px 7px',
+                  borderRadius: '5px',
+                  color,
+                  border: `1px solid ${color}55`,
+                  background: `${color}15`
+                }}>{health.grade}</span>
+              )}
+            </div>
+            <div style={{
+              fontSize: '11px',
+              color: '#71717a',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              marginTop: '4px'
+            }}>
+              {health.cycles || 0} cycles · {health.orphans || 0} orphans · {health.godComponents || 0} god
+            </div>
+          </>
+        ) : (
+          <div style={{ color: '#71717a', fontSize: '13px' }}>Run an analysis to score</div>
+        )}
+      </div>
+      <Sparkline scores={trend} color={color} />
+    </div>
+  )
+}
+
+function Sparkline({ scores = [], color }) {
+  if (scores.length < 2) {
+    return (
+      <div style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '6px',
+        background: '#1a1a1a',
+        color: '#ffffff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '20px'
+      }}>◈</div>
+    )
+  }
+
+  const w = 88
+  const h = 40
+  const pad = 4
+  const min = Math.min(...scores)
+  const max = Math.max(...scores)
+  const range = max - min || 1
+  const step = scores.length > 1 ? (w - pad * 2) / (scores.length - 1) : 0
+  const points = scores.map((s, i) => [
+    pad + i * step,
+    h - pad - ((s - min) / range) * (h - pad * 2)
+  ])
+  const path = points.map(p => p.join(',')).join(' ')
+  const [lastX, lastY] = points[points.length - 1]
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+      <polyline
+        points={path}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.9"
+      />
+      <circle cx={lastX} cy={lastY} r="3" fill={color} />
+    </svg>
   )
 }
 

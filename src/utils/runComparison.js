@@ -31,7 +31,13 @@ export function compareRuns(currentRun, previousRun) {
 
   // Check if there are any meaningful changes
   const hasFileChanges = addedFiles.length > 0 || removedFiles.length > 0
+  const healthChanged = (
+    current.healthScore !== null &&
+    previous.healthScore !== null &&
+    current.healthScore !== previous.healthScore
+  )
   const hasMetricChanges = (
+    healthChanged ||
     current.totalFiles !== previous.totalFiles ||
     current.totalComponents !== previous.totalComponents ||
     current.totalHooks !== previous.totalHooks ||
@@ -54,6 +60,10 @@ export function compareRuns(currentRun, previousRun) {
       previousTotal: previous.totalFiles
     },
     metricChanges: {
+      healthScore:
+        current.healthScore !== null && previous.healthScore !== null
+          ? current.healthScore - previous.healthScore
+          : null,
       totalFiles: current.totalFiles - previous.totalFiles,
       totalComponents: current.totalComponents - previous.totalComponents,
       totalHooks: current.totalHooks - previous.totalHooks,
@@ -86,6 +96,7 @@ function extractRunData(run) {
   const totalContexts = stats.totalContexts ?? snapshot.totalContexts ?? 0
   const totalPages = stats.totalPages ?? snapshot.totalPages ?? 0
   const totalConfigs = stats.totalConfigs ?? snapshot.totalConfigs ?? 0
+  const healthScore = stats.healthScore ?? snapshot.stats?.healthScore ?? null
 
   // Extract cyclic edges
   const cyclicEdges = snapshot.cyclicEdges || []
@@ -102,6 +113,7 @@ function extractRunData(run) {
     totalPages,
     totalConfigs,
     totalStructure,
+    healthScore,
     cyclicEdges
   }
 }
