@@ -60,6 +60,7 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const { fitView } = useReactFlow()
   const [direction, setDirection] = useState('TB')
+  const [showHeat, setShowHeat] = useState(false)
   const wrapperRef = useRef(null)
 
   // Expose export methods via ref
@@ -99,6 +100,24 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
       setTimeout(() => fitView({ padding: 0.05, minZoom: 0.8, maxZoom: 1.2, duration: 500 }), 100)
     })
   }, [direction, edges, fitView, setNodes, nodes])
+
+  useEffect(() => {
+    setNodes(nds => {
+      let changed = false
+      const next = nds.map(n => {
+        const fanIn = n.data?.importedBy?.length || 0
+        const level = fanIn >= 8 ? 3 : fanIn >= 5 ? 2 : fanIn >= 3 ? 1 : 0
+        const wantEnabled = showHeat
+        const wantLevel = showHeat ? level : 0
+        if (n.data?.heatEnabled === wantEnabled && (n.data?.heatLevel ?? 0) === wantLevel) {
+          return n
+        }
+        changed = true
+        return { ...n, data: { ...n.data, heatEnabled: wantEnabled, heatLevel: wantLevel } }
+      })
+      return changed ? next : nds
+    })
+  }, [showHeat, nodes, setNodes])
 
   useEffect(() => {
     const searchActive = Boolean(searchTerm)
@@ -156,39 +175,83 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
       >
         <Background color="rgba(255,255,255,0.06)" gap={24} size={1} />
 
-        {/* Layout Toggle Button */}
+        {/* Layout + Heat toggles */}
         <Panel position="bottom-center">
-          <button
-            onClick={toggleLayout}
-            style={{
-              padding: '8px 20px',
-              background: '#1a1a1a',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '20px',
-              color: '#a0a0a0',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backdropFilter: 'blur(8px)',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#e2e2e2'
-              e.currentTarget.style.color = '#ffffff'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
-              e.currentTarget.style.color = '#a0a0a0'
-            }}
-          >
-            <span style={{ fontSize: '14px' }}>
-              {direction === 'TB' ? '↔' : '↕'}
-            </span>
-            Toggle Layout
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {showHeat && (
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'center',
+                padding: '6px 12px',
+                background: '#1a1a1a',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '20px',
+                fontSize: '11px',
+                color: '#a0a0a0',
+                backdropFilter: 'blur(8px)'
+              }}>
+                {[[3, '#f5a623'], [5, '#fb923c'], [8, '#ef4444']].map(([threshold, color]) => (
+                  <span key={threshold} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{
+                      width: '9px', height: '9px',
+                      borderRadius: '2px',
+                      borderLeft: `3px solid ${color}`,
+                      background: `${color}22`
+                    }} />
+                    {threshold}+
+                  </span>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowHeat(value => !value)}
+              data-testid="heat-toggle"
+              style={{
+                padding: '8px 16px',
+                background: showHeat ? '#f5a62322' : '#1a1a1a',
+                border: `1px solid ${showHeat ? '#f5a62366' : 'rgba(255,255,255,0.12)'}`,
+                borderRadius: '20px',
+                color: showHeat ? '#f5a623' : '#a0a0a0',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600',
+                backdropFilter: 'blur(8px)',
+                transition: 'all 0.2s'
+              }}
+              title="Color nodes by how many files depend on them"
+            >
+              🔥 Heat
+            </button>
+            <button
+              onClick={toggleLayout}
+              style={{
+                padding: '8px 20px',
+                background: '#1a1a1a',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '20px',
+                color: '#a0a0a0',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                backdropFilter: 'blur(8px)',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = '#e2e2e2'
+                e.currentTarget.style.color = '#ffffff'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+                e.currentTarget.style.color = '#a0a0a0'
+              }}
+            >
+              Toggle Layout
+            </button>
+          </div>
         </Panel>
 
         <Controls style={{

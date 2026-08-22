@@ -10,15 +10,27 @@ const TYPE_CONFIG = {
   ghost:     { icon: '👻', color: '#8a8a8a', label: 'External' },
 }
 
+const HEAT_LEVELS = {
+  1: { color: '#f5a623', name: 'warm' },
+  2: { color: '#fb923c', name: 'hot' },
+  3: { color: '#ef4444', name: 'critical' },
+}
+
 export default function ComponentNode({ data, selected }) {
   const config = TYPE_CONFIG[data.nodeType] || TYPE_CONFIG.component
   const importCount = data.imports?.length || 0
   const usedByCount = data.importedBy?.length || 0
+  const heat = data.heatEnabled && data.heatLevel > 0 ? HEAT_LEVELS[data.heatLevel] : null
 
   return (
-    <div style={{
-      background: selected ? '#1a1a1a' : '#1a1a1a',
+    <div
+      title={heat ? `${usedByCount} files depend on this (${heat.name})` : undefined}
+      style={{
+      background: heat
+        ? `linear-gradient(90deg, ${heat.color}14, #1a1a1a 45%)`
+        : selected ? '#1a1a1a' : '#1a1a1a',
       border: `1px solid ${selected ? config.color : 'rgba(255,255,255,0.12)'}`,
+      borderLeft: heat ? `3px solid ${heat.color}` : undefined,
       borderRadius: '10px',
       minWidth: '170px',
       maxWidth: '200px',
@@ -58,6 +70,19 @@ export default function ComponentNode({ data, selected }) {
           textTransform: 'uppercase',
           letterSpacing: '0.8px',
         }}>{config.label}</span>
+        {heat && (
+          <span style={{
+            marginLeft: 'auto',
+            fontSize: '9px',
+            fontWeight: '700',
+            fontFamily: 'monospace',
+            color: heat.color,
+            background: `${heat.color}1a`,
+            border: `1px solid ${heat.color}44`,
+            padding: '0 5px',
+            borderRadius: '4px'
+          }}>{usedByCount}×</span>
+        )}
         {data.isGhost && (
           <span style={{
             marginLeft: 'auto',
