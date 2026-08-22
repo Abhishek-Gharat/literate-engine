@@ -149,7 +149,7 @@ function App() {
 
   // Demo mode
   if (demoMode) {
-    return <DemoExperience onBackToApp={handleBackToInput} />
+    return <DemoExperience onBackToApp={handleBackToInput} initialView="loading" />
   }
 
   if (!graphReady) {

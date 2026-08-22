@@ -1,4 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
+
+const PAGE_SIZE = 12
 
 /**
  * ProjectsSidebar - Left sidebar with project list and creation
@@ -16,6 +18,23 @@ export default function ProjectsSidebar({
   onOpenGraphs,
   onOpenSettings
 }) {
+  const [search, setSearch] = useState('')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  const query = search.trim().toLowerCase()
+  const filteredProjects = query
+    ? projects.filter(p =>
+        p.name?.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query)
+      )
+    : projects
+  const visibleProjects = filteredProjects.slice(0, visibleCount)
+
+  const handleSearchChange = (event) => {
+    setSearch(event.target.value)
+    setVisibleCount(PAGE_SIZE)
+  }
+
   return (
     <aside style={{
       width: '280px',
@@ -96,6 +115,29 @@ export default function ProjectsSidebar({
         textTransform: 'uppercase'
       }}>Projects</div>
 
+      {projects.length > 8 && !projectsLoading && (
+        <div style={{ padding: '10px 24px 4px' }}>
+          <input
+            type="text"
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Search projects..."
+            data-testid="project-search"
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '7px 10px',
+              background: '#111111',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '6px',
+              color: '#ededed',
+              fontSize: '12px',
+              outline: 'none'
+            }}
+          />
+        </div>
+      )}
+
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 24px 16px' }}>
         {projectsLoading ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#a1a1a1' }}>
@@ -130,8 +172,13 @@ export default function ProjectsSidebar({
               Create your first project to get started
             </div>
           </div>
+        ) : filteredProjects.length === 0 ? (
+          <div data-testid="no-search-results" style={{ padding: '32px 0', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>
+            No projects match "{search}"
+          </div>
         ) : (
-          projects.map(project => (
+          <>
+            {visibleProjects.map(project => (
             <div
               key={project.id}
               onClick={() => !isAnalyzing && onSelectProject(project)}
@@ -208,7 +255,29 @@ export default function ProjectsSidebar({
                 )}
               </div>
             </div>
-          ))
+            ))}
+            {filteredProjects.length > visibleProjects.length && (
+              <button
+                type="button"
+                onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
+                data-testid="show-more-projects"
+                style={{
+                  width: '100%',
+                  marginTop: '6px',
+                  padding: '8px 0',
+                  background: 'transparent',
+                  border: '1px dashed rgba(255,255,255,0.25)',
+                  borderRadius: '6px',
+                  color: '#a1a1a1',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Show more ({filteredProjects.length - visibleProjects.length} remaining)
+              </button>
+            )}
+          </>
         )}
 
         <div style={{

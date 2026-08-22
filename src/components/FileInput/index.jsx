@@ -156,10 +156,11 @@ export default function FileInput({
           <h1 style={{
             margin: 0,
             color: '#ffffff',
-            fontSize: '28px',
+            fontSize: '20px',
             fontWeight: '800',
+            letterSpacing: '0.5px',
             textShadow: 'none'
-          }}>Dashboard</h1>
+          }}>⚡ ReactViz</h1>
           <nav style={{ display: 'flex', alignItems: 'stretch', gap: '32px', height: '100%' }}>
             {tabs.map(tab => (
               <button

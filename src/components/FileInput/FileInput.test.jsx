@@ -386,6 +386,35 @@ describe('FileInput Component', () => {
     expect(within(modal).getByText('Hooks')).toBeInTheDocument()
   })
 
+  test('sidebar search filters projects and show-more paginates', async () => {
+    const manyProjects = Array.from({ length: 15 }, (_, i) => ({
+      id: `p-${i}`,
+      name: i < 2 ? `alpha-${i}` : `omega-${i}`,
+      runCount: 0,
+    }))
+    listProjects.mockResolvedValue(manyProjects)
+
+    renderFileInput({ selectedProject: null })
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading projects...')).not.toBeInTheDocument()
+    })
+
+    // Paginated by default
+    expect(screen.getAllByTestId(/^project-item-p-/)).toHaveLength(12)
+    expect(screen.getByTestId('show-more-projects')).toHaveTextContent(/3 remaining/)
+
+    // Search narrows the list and hides pagination
+    await userEvent.type(screen.getByTestId('project-search'), 'alpha')
+    expect(screen.getAllByTestId(/^project-item-p-/)).toHaveLength(2)
+    expect(screen.queryByTestId('show-more-projects')).not.toBeInTheDocument()
+
+    // No-match state
+    await userEvent.clear(screen.getByTestId('project-search'))
+    await userEvent.type(screen.getByTestId('project-search'), 'zzz')
+    expect(screen.getByTestId('no-search-results')).toBeInTheDocument()
+  })
+
   test('shows runs error with retry button', async () => {
     const mockProject = { id: '1', name: 'Test Project', runCount: 0 }
     listProjects.mockResolvedValue([mockProject])

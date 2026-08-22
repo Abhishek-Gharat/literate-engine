@@ -31,9 +31,16 @@ const VIEWS = {
 /**
  * DemoExperience - Main demo flow controller
  * Orchestrates: Entry -> Loading -> Overview -> Graph
+ *
+ * @param {Object} props
+ * @param {Function} props.onBackToApp
+ * @param {string} [props.initialView='entry'] - Start at 'entry' or skip straight to 'loading'
  */
-export function DemoExperience({ onBackToApp }) {
-  const [currentView, setCurrentView] = useState(VIEWS.ENTRY)
+export function DemoExperience({ onBackToApp, initialView = 'entry' }) {
+  const startView = Object.values(VIEWS).includes(initialView)
+    ? initialView
+    : VIEWS[String(initialView).toUpperCase()] || VIEWS.ENTRY
+  const [currentView, setCurrentView] = useState(startView)
 
   const handleTryDemo = () => {
     setCurrentView(VIEWS.LOADING)
