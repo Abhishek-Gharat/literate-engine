@@ -17,7 +17,7 @@ export const MAX_SCORE = 100
  * @param {number} [input.unresolvedImports] - Count of unresolved import statements
  * @returns {{ score: number|null, grade: string|null, breakdown: Array, metrics: Object }}
  */
-export function computeHealthScore({ nodes = [], cyclicEdges = [], unresolvedImports = 0 } = {}) {
+export function computeHealthScore({ nodes = [], cyclicEdges = [], unresolvedImports = 0, deadExportCount = 0 } = {}) {
   const safeNodes = Array.isArray(nodes) ? nodes.filter(Boolean) : []
   const files = safeNodes.filter((node) => !node.isGhost)
   const totalFiles = files.length
@@ -34,6 +34,7 @@ export function computeHealthScore({ nodes = [], cyclicEdges = [], unresolvedImp
     godComponents,
     avgCoupling,
     unresolvedImports,
+    deadExports: deadExportCount,
   }
 
   if (totalFiles === 0) {
@@ -47,6 +48,7 @@ export function computeHealthScore({ nodes = [], cyclicEdges = [], unresolvedImp
     { id: 'orphans', penalty: Math.min(Math.round(orphanRatio * 20), 20) },
     { id: 'godComponents', penalty: Math.min(godComponents * 6, 18) },
     { id: 'coupling', penalty: avgCoupling > 3 ? Math.min(Math.round(avgCoupling - 3) * 4, 10) : 0 },
+    { id: 'deadExports', penalty: Math.min(deadExportCount * 2, 10) },
     { id: 'unresolved', penalty: Math.min(unresolvedImports, 10) },
   ]
   const totalPenalty = penalties.reduce((sum, p) => sum + p.penalty, 0)
@@ -80,6 +82,13 @@ export function computeHealthScore({ nodes = [], cyclicEdges = [], unresolvedImp
       value: `${avgCoupling}`,
       detail: 'Imports per file',
       status: avgCoupling <= 2.5 ? 'good' : avgCoupling <= 4 ? 'warn' : 'bad',
+    },
+    {
+      id: 'deadExports',
+      label: 'Dead exports',
+      value: `${deadExportCount}`,
+      detail: 'Exported symbols nothing imports',
+      status: deadExportCount === 0 ? 'good' : deadExportCount <= 3 ? 'warn' : 'bad',
     },
     {
       id: 'unresolved',

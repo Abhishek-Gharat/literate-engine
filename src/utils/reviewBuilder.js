@@ -114,7 +114,35 @@ export function buildReviewDigest({ nodes = [], cyclicEdges = [], unresolvedImpo
 
   lines.push('')
   lines.push(`GOD COMPONENTS (fan-in >= ${GOD_FAN_IN_THRESHOLD} or fan-out >= ${GOD_FAN_OUT_THRESHOLD}): ${godComponents.length}`)
+
+  const deadFiles = safeNodesForDead(nodes)
+    .filter((node) => node.deadExports.length > 0)
+    .sort((a, b) => b.deadExports.length - a.deadExports.length)
+    .slice(0, MAX_COUPLED)
+  lines.push(`DEAD EXPORTS (${deadFiles.reduce((sum, f) => sum + f.deadExports.length, 0)}):`)
+  if (deadFiles.length === 0) {
+    lines.push('none')
+  } else {
+    for (const file of deadFiles) {
+      lines.push(`${file.id}: ${file.deadExports.join(', ')}`)
+    }
+  }
+
   lines.push(`UNRESOLVED IMPORTS: ${unresolvedImports}`)
 
   return lines.join('\n')
+}
+
+function normalizeNode(node) {
+  return {
+    id: node?.id,
+    isGhost: node?.isGhost ?? node?.data?.isGhost ?? false,
+    deadExports: node?.deadExports ?? node?.data?.deadExports ?? [],
+  }
+}
+
+function safeNodesForDead(rawNodes) {
+  return (Array.isArray(rawNodes) ? rawNodes : [])
+    .map(normalizeNode)
+    .filter((node) => node.id && !node.isGhost)
 }

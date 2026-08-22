@@ -62,6 +62,7 @@ function adaptApiNode(node, depMap) {
       isGhost,
       isEntryPoint: isEntry,
       signals: node.signals || null,
+      deadExports: node.deadExports || [],
       imports: node.imports || depMap[node.id] || [],
       importedBy: node.importedBy || allFiles.filter((file) => depMap[file]?.includes(node.id)),
     },

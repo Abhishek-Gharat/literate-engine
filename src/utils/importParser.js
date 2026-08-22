@@ -128,17 +128,47 @@ function visitAst(node, visitor) {
   })
 }
 
-function createImportRecord({ source, specifier, importType }) {
+function createImportRecord({ source, specifier, importType, ...extra }) {
   return {
     source,
     specifier,
     importType,
+    ...extra,
   }
+}
+
+function importedNameOf(specifierNode) {
+  if (!specifierNode) return null
+  const imported = specifierNode.imported
+  if (!imported) return null
+  return typeof imported === 'string' ? imported : imported.name
+}
+
+function collectDeclaredNames(declaration) {
+  if (!declaration) return []
+  if (declaration.type === 'FunctionDeclaration' || declaration.type === 'ClassDeclaration') {
+    return declaration.id?.name ? [declaration.id.name] : []
+  }
+  if (declaration.type === 'VariableDeclaration') {
+    return declaration.declarations
+      .map((d) => (d.id?.type === 'Identifier' ? d.id.name : null))
+      .filter(Boolean)
+  }
+  return []
 }
 
 export function parseImportRecords(files) {
   const records = []
   const analysisErrors = []
+  const exportsByFile = {}
+
+  const markExport = (fileName, { name = null, hasDefault = false }) => {
+    if (!exportsByFile[fileName]) {
+      exportsByFile[fileName] = { names: new Set(), hasDefault: false }
+    }
+    if (name) exportsByFile[fileName].names.add(name)
+    if (hasDefault) exportsByFile[fileName].hasDefault = true
+  }
 
   files.forEach((file) => {
     try {
@@ -146,23 +176,68 @@ export function parseImportRecords(files) {
 
       visitAst(ast, (node) => {
         if (node.type === 'ImportDeclaration') {
+          const importedNames = []
+          let hasDefault = false
+          let hasNamespace = false
+          for (const spec of node.specifiers || []) {
+            if (spec.type === 'ImportDefaultSpecifier') hasDefault = true
+            else if (spec.type === 'ImportNamespaceSpecifier') hasNamespace = true
+            else if (spec.type === 'ImportSpecifier') {
+              const importedName = importedNameOf(spec)
+              if (importedName) importedNames.push(importedName)
+            }
+          }
           records.push(createImportRecord({
             source: file.name,
             specifier: node.source.value,
             importType: 'static-import',
+            importedNames,
+            hasDefault,
+            hasNamespace,
           }))
           return
         }
 
-        if (
-          (node.type === 'ExportNamedDeclaration' || node.type === 'ExportAllDeclaration') &&
-          node.source?.value
-        ) {
+        if (node.type === 'ExportNamedDeclaration') {
+          if (node.source?.value) {
+            // Re-export barrel: record usage mapping exported -> local from target
+            const reexports = (node.specifiers || []).map((spec) => ({
+              local: typeof spec.local === 'string' ? spec.local : spec.local?.name,
+              exported: typeof spec.exported === 'string' ? spec.exported : spec.exported?.name,
+            }))
+            records.push(createImportRecord({
+              source: file.name,
+              specifier: node.source.value,
+              importType: 'static-import',
+              reexports: reexports.filter((entry) => entry.local && entry.exported),
+            }))
+            for (const spec of node.specifiers || []) {
+              const exported = typeof spec.exported === 'string' ? spec.exported : spec.exported?.name
+              if (exported) markExport(file.name, { name: exported })
+            }
+            return
+          }
+
+          collectDeclaredNames(node.declaration).forEach((name) => markExport(file.name, { name }))
+          for (const spec of node.specifiers || []) {
+            const exported = typeof spec.exported === 'string' ? spec.exported : spec.exported?.name
+            if (exported) markExport(file.name, { name: exported })
+          }
+          return
+        }
+
+        if (node.type === 'ExportAllDeclaration') {
           records.push(createImportRecord({
             source: file.name,
             specifier: node.source.value,
             importType: 'static-import',
+            opaque: true,
           }))
+          return
+        }
+
+        if (node.type === 'ExportDefaultDeclaration') {
+          markExport(file.name, { hasDefault: true })
           return
         }
 
@@ -173,6 +248,7 @@ export function parseImportRecords(files) {
               source: file.name,
               specifier,
               importType: 'require',
+              opaque: true,
             }))
           }
           return
@@ -185,6 +261,7 @@ export function parseImportRecords(files) {
               source: file.name,
               specifier,
               importType: 'dynamic-import',
+              opaque: true,
             }))
           } else {
             analysisErrors.push({
@@ -225,6 +302,7 @@ export function parseImportRecords(files) {
   return {
     records,
     analysisErrors,
+    exports: exportsByFile,
   }
 }
 

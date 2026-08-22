@@ -84,6 +84,63 @@ function countUniqueCycles(cyclicEdges) {
   return cyclicEdges.length > 0 ? cyclicEdges.length / 2 : 0
 }
 
+const EMPTY_NAME_SET = new Set()
+
+/**
+ * Build a per-file usage index of imported names from resolved records,
+ * propagating usage through re-export barrels until fixpoint so
+ * `export { x } from './y'` chains don't produce false dead exports.
+ */
+function buildExportUsageIndex(resolvedRecords) {
+  const usedNames = new Map()
+  const fullyUsed = new Set()
+  const reexports = []
+
+  const markUsed = (target, name) => {
+    if (!target || !name) return
+    let set = usedNames.get(target)
+    if (!set) {
+      set = new Set()
+      usedNames.set(target, set)
+    }
+    set.add(name)
+  }
+
+  for (const record of resolvedRecords) {
+    if (!record.resolved || !record.target) continue
+
+    if (record.opaque || record.hasNamespace) {
+      fullyUsed.add(record.target)
+      continue
+    }
+
+    if (Array.isArray(record.reexports) && record.reexports.length > 0) {
+      for (const entry of record.reexports) {
+        reexports.push({ from: record.source, target: record.target, local: entry.local, exported: entry.exported })
+      }
+      continue
+    }
+
+    for (const name of record.importedNames || []) {
+      markUsed(record.target, name)
+    }
+  }
+
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const { from, target, local, exported } of reexports) {
+      const sourceSet = usedNames.get(from)
+      if (sourceSet?.has(exported) && !(usedNames.get(target)?.has(local))) {
+        markUsed(target, local)
+        changed = true
+      }
+    }
+  }
+
+  return { usedNames, fullyUsed }
+}
+
 const USE_CONTEXT_RE = /useContext\s*\(\s*([A-Za-z_$][\w$]*)/g
 const USE_STATE_RE = /useState\s*[(<]/g
 
@@ -92,7 +149,7 @@ const USE_STATE_RE = /useState\s*[(<]/g
  * stable enough for risk scoring and cheap enough to run on every upload.
  */
 export function extractReactSignals(content) {
-  const contextConsumers = [...content.matchAll(USE_CONTEXT_RE)].map((match) => match[1])
+const contextConsumers = [...content.matchAll(USE_CONTEXT_RE)].map((match) => match[1])
   const stateHooks = (content.match(USE_STATE_RE) || []).length
   const memoized =
     /\bmemo\s*\(/.test(content) ||
@@ -159,6 +216,23 @@ export function analyzeProject(files, options = {}) {
       : { stateHooks: 0, contextConsumers: [], memoized: false, definesContext: false }
   }
 
+  const exportUsage = buildExportUsageIndex(resolved.records)
+  const exportsByFile = parsed.exports || {}
+  for (const node of nodes) {
+    if (!contentByName.has(node.id)) {
+      node.deadExports = []
+      continue
+    }
+    const exported = exportsByFile[node.id]
+    if (!exported || exportUsage.fullyUsed.has(node.id)) {
+      node.deadExports = []
+      continue
+    }
+    const used = exportUsage.usedNames.get(node.id) || EMPTY_NAME_SET
+    node.deadExports = [...exported.names].filter((name) => !used.has(name)).sort()
+  }
+  const totalDeadExports = nodes.reduce((sum, node) => sum + node.deadExports.length, 0)
+
   let totalStateHooks = 0
   let contextDefinitions = 0
   for (const node of nodes) {
@@ -169,6 +243,7 @@ export function analyzeProject(files, options = {}) {
     nodes,
     cyclicEdges,
     unresolvedImports: unresolvedImports.length,
+    deadExportCount: totalDeadExports,
   })
 
   return {
@@ -192,6 +267,7 @@ export function analyzeProject(files, options = {}) {
       analysisErrors: analysisErrors.length,
       totalStateHooks,
       contextDefinitions,
+      deadExports: totalDeadExports,
       healthScore: health.score,
       healthGrade: health.grade,
     },
