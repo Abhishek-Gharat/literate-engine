@@ -16,21 +16,36 @@ const HEAT_LEVELS = {
   3: { color: '#ef4444', name: 'critical' },
 }
 
+const RISK_LEVELS = {
+  1: { color: '#d8b4fe', name: 'elevated' },
+  2: { color: '#a855f7', name: 'high' },
+  3: { color: '#7c3aed', name: 'critical' },
+}
+
 export default function ComponentNode({ data, selected }) {
   const config = TYPE_CONFIG[data.nodeType] || TYPE_CONFIG.component
   const importCount = data.imports?.length || 0
   const usedByCount = data.importedBy?.length || 0
   const heat = data.heatEnabled && data.heatLevel > 0 ? HEAT_LEVELS[data.heatLevel] : null
+  const risk = data.riskEnabled && data.riskLevel > 0 ? RISK_LEVELS[data.riskLevel] : null
+  const accent = heat || risk
+  const consumers = data.signals?.contextConsumers?.length || 0
 
   return (
     <div
-      title={heat ? `${usedByCount} files depend on this (${heat.name})` : undefined}
+      title={
+        heat
+          ? `${usedByCount} files depend on this (${heat.name})`
+          : risk
+            ? `${consumers} context${consumers === 1 ? '' : 's'} consumed (${risk.name} re-render risk)`
+            : undefined
+      }
       style={{
-      background: heat
-        ? `linear-gradient(90deg, ${heat.color}14, #1a1a1a 45%)`
+      background: accent
+        ? `linear-gradient(90deg, ${accent.color}14, #1a1a1a 45%)`
         : selected ? '#1a1a1a' : '#1a1a1a',
       border: `1px solid ${selected ? config.color : 'rgba(255,255,255,0.12)'}`,
-      borderLeft: heat ? `3px solid ${heat.color}` : undefined,
+      borderLeft: accent ? `3px solid ${accent.color}` : undefined,
       borderRadius: '10px',
       minWidth: '170px',
       maxWidth: '200px',
@@ -82,6 +97,19 @@ export default function ComponentNode({ data, selected }) {
             padding: '0 5px',
             borderRadius: '4px'
           }}>{usedByCount}×</span>
+        )}
+        {risk && (
+          <span style={{
+            marginLeft: heat ? 0 : 'auto',
+            fontSize: '9px',
+            fontWeight: '700',
+            fontFamily: 'monospace',
+            color: risk.color,
+            background: `${risk.color}1a`,
+            border: `1px solid ${risk.color}44`,
+            padding: '0 5px',
+            borderRadius: '4px'
+          }}>⚛{consumers}</span>
         )}
         {data.isGhost && (
           <span style={{

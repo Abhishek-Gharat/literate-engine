@@ -60,7 +60,7 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const { fitView } = useReactFlow()
   const [direction, setDirection] = useState('TB')
-  const [showHeat, setShowHeat] = useState(false)
+  const [visualMode, setVisualMode] = useState('off') // 'off' | 'heat' | 'risk'
   const wrapperRef = useRef(null)
 
   // Expose export methods via ref
@@ -106,18 +106,32 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
       let changed = false
       const next = nds.map(n => {
         const fanIn = n.data?.importedBy?.length || 0
-        const level = fanIn >= 8 ? 3 : fanIn >= 5 ? 2 : fanIn >= 3 ? 1 : 0
-        const wantEnabled = showHeat
-        const wantLevel = showHeat ? level : 0
-        if (n.data?.heatEnabled === wantEnabled && (n.data?.heatLevel ?? 0) === wantLevel) {
+        const consumers = n.data?.signals?.contextConsumers?.length || 0
+        const wantHeat = visualMode === 'heat'
+        const wantRisk = visualMode === 'risk'
+        const heatLevel = fanIn >= 8 ? 3 : fanIn >= 5 ? 2 : fanIn >= 3 ? 1 : 0
+        const riskLevel = consumers >= 5 ? 3 : consumers >= 3 ? 2 : consumers >= 2 ? 1 : 0
+        if (
+          n.data?.heatEnabled === wantHeat && (n.data?.heatLevel ?? 0) === (wantHeat ? heatLevel : 0) &&
+          n.data?.riskEnabled === wantRisk && (n.data?.riskLevel ?? 0) === (wantRisk ? riskLevel : 0)
+        ) {
           return n
         }
         changed = true
-        return { ...n, data: { ...n.data, heatEnabled: wantEnabled, heatLevel: wantLevel } }
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            heatEnabled: wantHeat,
+            heatLevel: wantHeat ? heatLevel : 0,
+            riskEnabled: wantRisk,
+            riskLevel: wantRisk ? riskLevel : 0,
+          }
+        }
       })
       return changed ? next : nds
     })
-  }, [showHeat, nodes, setNodes])
+  }, [visualMode, nodes, setNodes])
 
   useEffect(() => {
     const searchActive = Boolean(searchTerm)
@@ -175,10 +189,10 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
       >
         <Background color="rgba(255,255,255,0.06)" gap={24} size={1} />
 
-        {/* Layout + Heat toggles */}
+        {/* Layout + visual-mode toggles */}
         <Panel position="bottom-center">
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {showHeat && (
+            {visualMode !== 'off' && (
               <div style={{
                 display: 'flex',
                 gap: '10px',
@@ -191,7 +205,10 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
                 color: '#a0a0a0',
                 backdropFilter: 'blur(8px)'
               }}>
-                {[[3, '#f5a623'], [5, '#fb923c'], [8, '#ef4444']].map(([threshold, color]) => (
+                {(visualMode === 'heat'
+                  ? [[3, '#f5a623'], [5, '#fb923c'], [8, '#ef4444']]
+                  : [[2, '#d8b4fe'], [3, '#a855f7'], [5, '#7c3aed']]
+                ).map(([threshold, color]) => (
                   <span key={threshold} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{
                       width: '9px', height: '9px',
@@ -202,17 +219,18 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
                     {threshold}+
                   </span>
                 ))}
+                <span style={{ color: '#6b6b6b' }}>{visualMode === 'heat' ? 'dependents' : 'contexts consumed'}</span>
               </div>
             )}
             <button
-              onClick={() => setShowHeat(value => !value)}
+              onClick={() => setVisualMode(mode => (mode === 'heat' ? 'off' : 'heat'))}
               data-testid="heat-toggle"
               style={{
                 padding: '8px 16px',
-                background: showHeat ? '#f5a62322' : '#1a1a1a',
-                border: `1px solid ${showHeat ? '#f5a62366' : 'rgba(255,255,255,0.12)'}`,
+                background: visualMode === 'heat' ? '#f5a62322' : '#1a1a1a',
+                border: `1px solid ${visualMode === 'heat' ? '#f5a62366' : 'rgba(255,255,255,0.12)'}`,
                 borderRadius: '20px',
-                color: showHeat ? '#f5a623' : '#a0a0a0',
+                color: visualMode === 'heat' ? '#f5a623' : '#a0a0a0',
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: '600',
@@ -222,6 +240,25 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
               title="Color nodes by how many files depend on them"
             >
               🔥 Heat
+            </button>
+            <button
+              onClick={() => setVisualMode(mode => (mode === 'risk' ? 'off' : 'risk'))}
+              data-testid="risk-toggle"
+              style={{
+                padding: '8px 16px',
+                background: visualMode === 'risk' ? '#7c3aed22' : '#1a1a1a',
+                border: `1px solid ${visualMode === 'risk' ? '#a855f766' : 'rgba(255,255,255,0.12)'}`,
+                borderRadius: '20px',
+                color: visualMode === 'risk' ? '#c084fc' : '#a0a0a0',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600',
+                backdropFilter: 'blur(8px)',
+                transition: 'all 0.2s'
+              }}
+              title="Color nodes by React re-render risk (contexts consumed)"
+            >
+              ⚛ Risk
             </button>
             <button
               onClick={toggleLayout}

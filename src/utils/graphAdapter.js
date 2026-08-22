@@ -52,7 +52,7 @@ function adaptApiNode(node, depMap) {
   const isEntry = isEntryPoint(node.id)
   const nodeType = isGhost ? 'ghost' : (isEntry ? 'entry' : (node.type || getNodeType(node.id)))
 
-  return {
+    return {
     id: node.id,
     type: 'componentNode',
     position: { x: 0, y: 0 },
@@ -61,6 +61,7 @@ function adaptApiNode(node, depMap) {
       nodeType,
       isGhost,
       isEntryPoint: isEntry,
+      signals: node.signals || null,
       imports: node.imports || depMap[node.id] || [],
       importedBy: node.importedBy || allFiles.filter((file) => depMap[file]?.includes(node.id)),
     },

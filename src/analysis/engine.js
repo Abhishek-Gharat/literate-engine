@@ -84,6 +84,24 @@ function countUniqueCycles(cyclicEdges) {
   return cyclicEdges.length > 0 ? cyclicEdges.length / 2 : 0
 }
 
+const USE_CONTEXT_RE = /useContext\s*\(\s*([A-Za-z_$][\w$]*)/g
+const USE_STATE_RE = /useState\s*[(<]/g
+
+/**
+ * Lightweight regex scan for React re-render signals. Not AST-exact, but
+ * stable enough for risk scoring and cheap enough to run on every upload.
+ */
+export function extractReactSignals(content) {
+  const contextConsumers = [...content.matchAll(USE_CONTEXT_RE)].map((match) => match[1])
+  const stateHooks = (content.match(USE_STATE_RE) || []).length
+  const memoized =
+    /\bmemo\s*\(/.test(content) ||
+    /React\.memo\s*\(/.test(content) ||
+    /useMemo\s*\(/.test(content)
+  const definesContext = /createContext\s*\(/.test(content)
+  return { stateHooks, contextConsumers, memoized, definesContext }
+}
+
 export function analyzeProject(files, options = {}) {
   const analysisErrors = [...(options.initialAnalysisErrors || [])]
   const sourceFiles = files
@@ -132,6 +150,21 @@ export function analyzeProject(files, options = {}) {
   const nodes = buildNodes(depMap, fileNames)
   const edges = buildEdges(depMap, cyclicEdges, resolved.records)
   const unresolvedImports = buildUnresolvedImports(resolved.records)
+
+  const contentByName = new Map(sourceFiles.map((file) => [file.name, file.content]))
+  for (const node of nodes) {
+    const content = contentByName.get(node.id)
+    node.signals = content !== undefined
+      ? extractReactSignals(content)
+      : { stateHooks: 0, contextConsumers: [], memoized: false, definesContext: false }
+  }
+
+  let totalStateHooks = 0
+  let contextDefinitions = 0
+  for (const node of nodes) {
+    totalStateHooks += node.signals.stateHooks
+    if (node.signals.definesContext) contextDefinitions += 1
+  }
   const health = computeHealthScore({
     nodes,
     cyclicEdges,
@@ -157,6 +190,8 @@ export function analyzeProject(files, options = {}) {
       cyclesFound: countUniqueCycles(cyclicEdges),
       unresolvedImports: unresolvedImports.length,
       analysisErrors: analysisErrors.length,
+      totalStateHooks,
+      contextDefinitions,
       healthScore: health.score,
       healthGrade: health.grade,
     },

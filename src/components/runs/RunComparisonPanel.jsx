@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { compareRuns, getPreviousRun } from '../../utils/runComparison'
 import GraphDiffModal from './GraphDiffModal'
+import EvolutionModal from './EvolutionModal'
 
 function formatDate(dateStr) {
   if (!dateStr) return 'Unknown'
@@ -18,6 +19,7 @@ function formatDate(dateStr) {
 export default function RunComparisonPanel({ runs, currentRun, selectedProject }) {
   const [showDetails, setShowDetails] = useState(false)
   const [showGraphDiff, setShowGraphDiff] = useState(false)
+  const [showEvolution, setShowEvolution] = useState(false)
 
   if (!currentRun || !selectedProject) {
     return null
@@ -186,6 +188,25 @@ export default function RunComparisonPanel({ runs, currentRun, selectedProject }
         {/* Actions */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
+            onClick={() => setShowEvolution(true)}
+            data-testid="evolution-button"
+            style={{
+              fontSize: '11px',
+              fontWeight: '600',
+              color: '#93c5fd',
+              background: 'rgba(59,130,246,0.12)',
+              border: '1px solid rgba(147,197,253,0.3)',
+              cursor: 'pointer',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              transition: 'all 150ms'
+            }}
+            onMouseEnter={(e) => { e.target.style.background = 'rgba(59,130,246,0.25)' }}
+            onMouseLeave={(e) => { e.target.style.background = 'rgba(59,130,246,0.12)' }}
+          >
+            ⏱ Evolution
+          </button>
+          <button
             onClick={() => setShowGraphDiff(true)}
             data-testid="graph-diff-button"
             style={{
@@ -230,6 +251,14 @@ export default function RunComparisonPanel({ runs, currentRun, selectedProject }
           previousRun={previousRun}
           currentRun={currentRun}
           onClose={() => setShowGraphDiff(false)}
+        />
+      )}
+
+      {/* Evolution overlay */}
+      {showEvolution && (
+        <EvolutionModal
+          runs={runs.filter(r => r.projectId === selectedProject.id)}
+          onClose={() => setShowEvolution(false)}
         />
       )}
 

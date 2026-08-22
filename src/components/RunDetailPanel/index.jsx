@@ -4,6 +4,7 @@ import RunDetailHeader from '../runs/RunDetailHeader'
 import RunDetailSummary from '../runs/RunDetailSummary'
 import RunDetailStats from '../runs/RunDetailStats'
 import RunDetailHealth from '../runs/RunDetailHealth'
+import RunDetailRisks from '../runs/RunDetailRisks'
 import RunDetailSnapshot from '../runs/RunDetailSnapshot'
 import RunDetailActionHint from '../runs/RunDetailActionHint'
 import LoadingState from '../feedback/LoadingState'
@@ -73,6 +74,7 @@ export default function RunDetailPanel({ run, loading = false, error = null }) {
         <RunDetailSummary stats={stats} hasSnapshot={hasSnapshot} insight={insight} />
         <RunDetailStats stats={stats} />
         <RunDetailHealth run={run} />
+        <RunDetailRisks run={run} />
         <RunDetailSnapshot hasSnapshot={hasSnapshot} />
         {hasSnapshot && <RunDetailActionHint />}
         <div
