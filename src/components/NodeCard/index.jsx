@@ -111,7 +111,7 @@ function StatItem({ label, value, color }) {
  * @param {string} props.borderColor - Left border color
  * @param {string} props.textColor - Text color
  */
-export function ImportList({ title, items, borderColor, textColor }) {
+export function ImportList({ title, items, borderColor, textColor, onItemClick }) {
   if (!items?.length) return null
 
   return (
@@ -122,27 +122,50 @@ export function ImportList({ title, items, borderColor, textColor }) {
         fontWeight: TYPOGRAPHY.weight.bold,
         textTransform: 'uppercase',
         letterSpacing: '0.8px',
-        marginBottom: '8px'
+        marginBottom: '8px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
-        {title}
+        <span>{title}</span>
+        <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.08)', padding: '1px 6px', borderRadius: '4px', color: COLORS.text.muted }}>
+          {items.length}
+        </span>
       </div>
-      {items.map((item, index) => (
-        <div
-          key={index}
-          style={{
-            padding: '6px 10px',
-            marginBottom: '3px',
-            background: COLORS.bg.card,
-            borderRadius: BORDER_RADIUS.md,
-            borderLeft: `2px solid ${borderColor}`,
-            color: textColor,
-            fontSize: TYPOGRAPHY.size.md,
-            fontFamily: TYPOGRAPHY.fontFamily.mono
-          }}
-        >
-          {item}
-        </div>
-      ))}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '180px', overflowY: 'auto' }}>
+        {items.map((item, index) => (
+          <div
+            key={index}
+            onClick={() => onItemClick?.(item)}
+            style={{
+              padding: '6px 10px',
+              background: COLORS.bg.card,
+              borderRadius: BORDER_RADIUS.md,
+              borderLeft: `2px solid ${borderColor}`,
+              color: textColor,
+              fontSize: TYPOGRAPHY.size.md,
+              fontFamily: TYPOGRAPHY.fontFamily.mono,
+              cursor: onItemClick ? 'pointer' : 'default',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              transition: 'background 0.15s ease'
+            }}
+            onMouseEnter={e => {
+              if (onItemClick) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+            }}
+            onMouseLeave={e => {
+              if (onItemClick) e.currentTarget.style.background = COLORS.bg.card
+            }}
+            title={onItemClick ? `Focus ${item}` : undefined}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {item}
+            </span>
+            {onItemClick && <span style={{ opacity: 0.5, fontSize: '10px' }}>→</span>}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

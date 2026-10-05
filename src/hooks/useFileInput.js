@@ -23,7 +23,8 @@ export function useFileInput({
   onLoadRun,
   onSelectRun,
   onRunsChange,
-  analyzing = false
+  analyzing = false,
+  selectedProject = null
 }) {
   const [mode, setMode] = useState('local')
   const [githubUrl, setGithubUrl] = useState('')
@@ -31,7 +32,7 @@ export function useFileInput({
   const [error, setError] = useState('')
   const [analysisSuccess, setAnalysisSuccess] = useState('')
 
-  // Project state
+  // Projects state
   const [projects, setProjects] = useState([])
   const [projectsLoading, setProjectsLoading] = useState(false)
   const [projectsError, setProjectsError] = useState(null)
@@ -55,12 +56,15 @@ export function useFileInput({
     try {
       const data = await listProjects()
       setProjects(data)
+      if (data && data.length > 0 && !selectedProject && onSelectProject) {
+        onSelectProject(data[0])
+      }
     } catch (err) {
       setProjectsError(err.message || 'Failed to connect to server')
     } finally {
       setProjectsLoading(false)
     }
-  }, [])
+  }, [selectedProject, onSelectProject])
 
   const loadRuns = useCallback(async (projectId) => {
     setRunsLoading(true)
@@ -131,10 +135,22 @@ export function useFileInput({
     }
   }, [newProjectName, newProjectDesc, onSelectProject])
 
-  const handleLocalFiles = useCallback(async (fileList, selectedProject) => {
-    if (!selectedProject) {
-      setError('Please select a project before analyzing files')
-      return
+  const handleLocalFiles = useCallback(async (fileList, targetProject) => {
+    let activeProject = targetProject || selectedProject
+    if (!activeProject) {
+      if (projects.length > 0) {
+        activeProject = projects[0]
+        if (onSelectProject) onSelectProject(activeProject)
+      } else {
+        try {
+          activeProject = await createProject('Workspace Project', 'Auto-created workspace')
+          setProjects([activeProject])
+          if (onSelectProject) onSelectProject(activeProject)
+        } catch {
+          setError('Please select or create a project before analyzing files')
+          return
+        }
+      }
     }
 
     const files = Array.from(fileList).filter(f => SOURCE_EXTENSIONS.test(f.name))
@@ -157,36 +173,52 @@ export function useFileInput({
         validFiles.map(f => f.text().then(content => ({ name: f.name, content })))
       )
 
-      await onFilesReady(fileData, selectedProject.id)
+      await onFilesReady(fileData, activeProject.id)
       setAnalysisSuccess(`Analysis complete! ${fileData.length} files analyzed and saved.`)
       setTimeout(() => setAnalysisSuccess(''), TOAST_TIMEOUT)
-      await loadRuns(selectedProject.id)
+      await loadRuns(activeProject.id)
     } catch (err) {
       setError(err.message || 'Analysis failed')
     } finally {
       setLoading(false)
     }
-  }, [onFilesReady, loadRuns])
+  }, [selectedProject, projects, onSelectProject, onFilesReady, loadRuns])
 
-  const handleGithubFetch = useCallback(async (selectedProject) => {
-    if (!selectedProject) {
-      setError('Please select a project before analyzing')
-      return
-    }
+  const handleGithubFetch = useCallback(async (targetProject) => {
     if (!githubUrl.trim()) {
       setError('Please enter a GitHub repository URL')
       return
+    }
+
+    const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/)
+    if (!match) {
+      setError('Invalid GitHub URL format')
+      return
+    }
+
+    const [, owner, repo] = match
+
+    let activeProject = targetProject || selectedProject
+    if (!activeProject) {
+      if (projects.length > 0) {
+        activeProject = projects[0]
+        if (onSelectProject) onSelectProject(activeProject)
+      } else {
+        try {
+          activeProject = await createProject(repo || 'GitHub Project', `Imported from ${githubUrl}`)
+          setProjects([activeProject])
+          if (onSelectProject) onSelectProject(activeProject)
+        } catch {
+          setError('Please select or create a project before analyzing')
+          return
+        }
+      }
     }
 
     setError('')
     setLoading(true)
 
     try {
-      const match = githubUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/)
-      if (!match) throw new Error('Invalid GitHub URL format')
-
-      const [, owner, repo] = match
-
       // First, get the default branch
       const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
       if (repoRes.status === 403 || repoRes.status === 429) {
@@ -249,16 +281,16 @@ export function useFileInput({
       if (fileData.length === 0) throw new Error('Failed to fetch any files from the repository')
       if (failedCount > 0) console.warn(`Skipped ${failedCount} files that could not be fetched`)
 
-      await onFilesReady(fileData, selectedProject.id)
+      await onFilesReady(fileData, activeProject.id)
       setAnalysisSuccess(`Analysis complete! ${fileData.length} files from GitHub analyzed.`)
       setTimeout(() => setAnalysisSuccess(''), TOAST_TIMEOUT)
-      await loadRuns(selectedProject.id)
+      await loadRuns(activeProject.id)
     } catch (err) {
       setError(err.message || 'Failed to analyze GitHub repository')
     } finally {
       setLoading(false)
     }
-  }, [githubUrl, onFilesReady, loadRuns])
+  }, [githubUrl, selectedProject, projects, onSelectProject, onFilesReady, loadRuns])
 
   const handleLoadRun = useCallback(async (runOrId) => {
     try {

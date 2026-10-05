@@ -55,15 +55,16 @@ function getLayoutedElements(nodes, edges, direction = 'TB') {
 }
 
 // Inner component
-function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats, cyclicEdges, highlightIds }, ref) {
+function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats, cyclicEdges, highlightIds, filteredNodeIds }, ref) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
-  const { fitView } = useReactFlow()
+  const { fitView, setCenter } = useReactFlow()
   const [direction, setDirection] = useState('TB')
   const [visualMode, setVisualMode] = useState('off') // 'off' | 'heat' | 'risk'
+  const [focusNodeId, setFocusNodeId] = useState(null) // Focus Mode: node being isolated
   const wrapperRef = useRef(null)
 
-  // Expose export methods via ref
+  // Expose export and focus methods via ref
   useImperativeHandle(ref, () => ({
     exportPNG: () => exportGraphAsPNG(wrapperRef.current),
     exportSVG: () => exportGraphAsSVG(wrapperRef.current),
@@ -71,7 +72,14 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
       const snapshot = getGraphSnapshot(nodes, edges, stats, cyclicEdges)
       exportAnalysisAsJSON(snapshot)
     },
-  }), [nodes, edges, stats, cyclicEdges])
+    focusNode: (nodeId) => {
+      const target = nodes.find(n => n.id === nodeId)
+      if (target && target.position && setCenter) {
+        setCenter(target.position.x + NODE_WIDTH / 2, target.position.y + NODE_HEIGHT / 2, { zoom: 1.1, duration: 500 })
+      }
+    },
+    clearFocus: () => setFocusNodeId(null),
+  }), [nodes, edges, stats, cyclicEdges, setCenter])
 
   useEffect(() => {
     if (!initialNodes?.length) return
@@ -133,41 +141,82 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
     })
   }, [visualMode, nodes, setNodes])
 
+  // Build the Focus Mode neighbour set for the focused node
+  const focusNeighbourSet = useCallback((nodeId, edgeList) => {
+    if (!nodeId) return null
+    const neighbours = new Set([nodeId])
+    for (const e of edgeList) {
+      if (e.source === nodeId) neighbours.add(e.target)
+      if (e.target === nodeId) neighbours.add(e.source)
+    }
+    return neighbours
+  }, [])
+
   useEffect(() => {
     const searchActive = Boolean(searchTerm)
     const impactSet = Array.isArray(highlightIds) && highlightIds.length > 0
       ? new Set(highlightIds)
       : null
     const impactActive = Boolean(impactSet)
+    const filterSet = Array.isArray(filteredNodeIds) && filteredNodeIds.length > 0
+      ? new Set(filteredNodeIds)
+      : null
+    const filterActive = Boolean(filterSet)
+    const focusSet = focusNeighbourSet(focusNodeId, edges)
+    const focusActive = Boolean(focusSet)
 
     setNodes(nds => nds.map(n => {
-      const matchesSearch = !searchActive || n.id.toLowerCase().includes(searchTerm.toLowerCase())
+      const q = (searchTerm || '').toLowerCase()
+      const matchesSearch = !searchActive ||
+        n.id.toLowerCase().includes(q) ||
+        (n.data?.label || '').toLowerCase().includes(q)
       const inImpact = !impactActive || impactSet.has(n.id)
-      const visible = matchesSearch && inImpact
+      const inFilter = !filterActive || filterSet.has(n.id)
+      const inFocus = !focusActive || focusSet.has(n.id)
+      const isFocused = focusActive && n.id === focusNodeId
+      const visible = matchesSearch && inImpact && inFilter && inFocus
+
       return {
         ...n,
         style: {
           ...n.style,
-          opacity: (searchActive || impactActive) ? (visible ? 1 : 0.15) : undefined,
-          boxShadow: (impactActive && visible) ? '0 0 0 2px rgba(245,166,35,0.45)' : undefined,
+          opacity: (searchActive || impactActive || filterActive || focusActive) ? (visible ? 1 : 0.08) : undefined,
+          boxShadow: isFocused
+            ? '0 0 0 3px rgba(99,102,241,0.9), 0 0 24px rgba(99,102,241,0.4)'
+            : (impactActive && inImpact) ? '0 0 0 3px rgba(245,166,35,0.7)' : undefined,
+          transition: 'opacity 0.2s ease, box-shadow 0.2s ease',
         }
       }
     }))
 
     setEdges(eds => eds.map(e => {
-      if (!impactActive) {
+      const inImpact = !impactActive || (impactSet.has(e.source) && impactSet.has(e.target))
+      const inFilter = !filterActive || (filterSet.has(e.source) && filterSet.has(e.target))
+      const inFocus = !focusActive || (focusSet.has(e.source) && focusSet.has(e.target))
+      if (!impactActive && !filterActive && !focusActive) {
         if (!e.data?.impact && !e.data?.dimmed) return e
         return { ...e, data: { ...e.data, impact: false, dimmed: false } }
       }
-      const related = impactSet.has(e.source) && impactSet.has(e.target)
-      return { ...e, data: { ...e.data, impact: related, dimmed: !related } }
+      const active = inImpact && inFilter && inFocus
+      return { ...e, data: { ...e.data, impact: inImpact && impactActive, dimmed: !active } }
     }))
-  }, [searchTerm, highlightIds, setNodes, setEdges])
+  }, [searchTerm, highlightIds, filteredNodeIds, focusNodeId, edges, focusNeighbourSet, setNodes, setEdges])
 
   const onConnect = useCallback(
     (params) => setEdges(eds => addEdge({ ...params, animated: true }, eds)),
     [setEdges]
   )
+
+  // Handle node click — also toggle Focus Mode
+  const handleNodeClick = useCallback((_, node) => {
+    if (focusNodeId === node.id) {
+      // Second click on same node: exit focus mode
+      setFocusNodeId(null)
+    } else {
+      setFocusNodeId(node.id)
+    }
+    onNodeClick?.(node)
+  }, [focusNodeId, onNodeClick])
 
   return (
     <div ref={wrapperRef} style={{ width: '100%', height: '100%', background: '#0a0a0a' }}>
@@ -177,7 +226,7 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={(_, node) => onNodeClick?.(node)}
+        onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
@@ -192,6 +241,27 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
         {/* Layout + visual-mode toggles */}
         <Panel position="bottom-center">
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {/* Focus Mode Indicator */}
+            {focusNodeId && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '6px 12px',
+                background: 'rgba(99,102,241,0.18)',
+                border: '1px solid rgba(99,102,241,0.5)',
+                borderRadius: '20px',
+                fontSize: '11px',
+                color: '#c7d2fe',
+                fontWeight: '600',
+                backdropFilter: 'blur(8px)',
+              }}>
+                <span>⬡ Focus Mode</span>
+                <button
+                  onClick={() => setFocusNodeId(null)}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px', padding: 0, lineHeight: 1 }}
+                  title="Exit focus mode"
+                >×</button>
+              </div>
+            )}
             {visualMode !== 'off' && (
               <div style={{
                 display: 'flex',
@@ -318,11 +388,12 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
 
 const FlowInnerWithRef = forwardRef(FlowInner)
 
-// Wrap with ReactFlowProvider so useReactFlow() works
-export default function GraphCanvas(props) {
+const GraphCanvas = forwardRef(function GraphCanvas(props, ref) {
   return (
     <ReactFlowProvider>
-      <FlowInnerWithRef {...props} />
+      <FlowInnerWithRef ref={ref} {...props} />
     </ReactFlowProvider>
   )
-}
+})
+
+export default GraphCanvas

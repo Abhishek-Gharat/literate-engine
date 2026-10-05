@@ -12,69 +12,165 @@
   to { transform: rotate(360deg); }
 }
 
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 body {
-  background: var(--bg-main);
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.10) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(56, 189, 248, 0.08) 0px, transparent 50%);
+  background-attachment: fixed;
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* ── Modern Glassmorphism & Panels ── */
 .glass {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .glass-heavy {
   background: var(--glass-bg-heavy);
   border: 1px solid var(--glass-border-heavy);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.glass-panel {
+  background: rgba(13, 16, 25, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.glass-card {
+  background: rgba(20, 25, 38, 0.70);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.react-flow__background { background: var(--bg-main) !important; }
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15);
+  transform: translateY(-2px);
+}
+
+/* ── AI Shimmer Pill ── */
+.shimmer-ai {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 35%, #ec4899 70%, #6366f1 100%);
+  background-size: 250% auto;
+  animation: shimmer 5s ease infinite;
+}
+
+/* ── React Flow Custom Theme ── */
+.react-flow__background {
+  background: transparent !important;
+}
+
+.react-flow__background-pattern line,
+.react-flow__background-pattern circle {
+  stroke: rgba(255, 255, 255, 0.06) !important;
+  fill: rgba(255, 255, 255, 0.06) !important;
+}
+
 .react-flow__controls {
-  background: var(--bg-elevated) !important;
-  border: 1px solid var(--border-default) !important;
-  border-radius: 8px !important;
-  box-shadow: none !important;
+  background: rgba(15, 19, 30, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  overflow: hidden;
 }
+
 .react-flow__controls button {
-  background: var(--bg-elevated) !important;
-  border-bottom: 1px solid var(--border-default) !important;
-  color: var(--text-muted) !important;
-  fill: var(--text-muted) !important;
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary) !important;
+  fill: var(--text-secondary) !important;
+  transition: all 0.15s ease;
 }
+
 .react-flow__controls button:hover {
-  background: var(--bg-panel) !important;
-  color: var(--accent-bright) !important;
-  fill: var(--accent-bright) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  fill: #ffffff !important;
 }
+
 .react-flow__minimap {
-  background: var(--bg-elevated) !important;
-  border: 1px solid var(--border-default) !important;
-  border-radius: 8px !important;
+  background: rgba(13, 16, 25, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(20px) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  overflow: hidden;
 }
-.react-flow__edge-path { stroke: var(--glow-accent); }
-.react-flow__edge:hover .react-flow__edge-path { stroke: var(--accent-default); }
-.react-flow__attribution { display: none; }
 
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--glass-border-heavy); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent-default); }
+.react-flow__attribution {
+  display: none !important;
+}
 
+/* ── React Flow Edges ── */
 .react-flow__edge-path {
   stroke-width: 1.5;
-  transition: stroke 0.2s ease;
+  transition: stroke 0.25s ease, stroke-width 0.25s ease, filter 0.25s ease;
 }
 
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: var(--accent-default) !important;
-  stroke-width: 2px !important;
-  filter: drop-shadow(0 0 6px var(--glow-accent-pulse));
+  stroke: #818cf8 !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.7));
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: var(--accent-bright) !important;
-  stroke-width: 2px !important;
+  stroke: #38bdf8 !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));
+}
+
+/* ── Custom Sleek Scrollbar ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.30);
 }
