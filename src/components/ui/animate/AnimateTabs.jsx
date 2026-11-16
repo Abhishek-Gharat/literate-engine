@@ -1,5 +1,5 @@
-import React from 'react'
-import { motion } from 'motion/react'
+﻿import React from 'react'
+import { motion as Motion } from 'motion/react'
 
 /**
  * AnimateTabs - Spring-animated segmented tab control from Animate UI registry pattern.
@@ -54,7 +54,7 @@ export function AnimateTabs({
             }}
           >
             {isActive && (
-              <motion.div
+              <Motion.div
                 layoutId={layoutId}
                 transition={{
                   type: 'spring',

@@ -28,7 +28,7 @@ export const SEVERITY = {
  */
 export function prioritizeIssues({ nodes = [], cyclicEdges = [], stats = {}, unresolvedImports = [] } = {}) {
   const safeNodes = Array.isArray(nodes) ? nodes.filter(Boolean) : []
-  const safeStats = stats || {}
+  const safeStats = stats && typeof stats === 'object' ? stats : {}
   const issues = []
 
   // Fast node lookup

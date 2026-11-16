@@ -39,19 +39,6 @@ function saveLocalProjects(projects) {
   }
 }
 
-function handleApiError(error) {
-  if (error.name === 'TypeError' && error.message.includes('fetch')) {
-    return new Error('Cannot connect to server. Please check if the backend is running.')
-  }
-  if (error.message === 'Request timed out') {
-    return new Error('Request timed out. Please try again.')
-  }
-  if (error.name === 'AbortError') {
-    return new Error('Request timed out. Please try again.')
-  }
-  return error
-}
-
 // Try a request with fallback to local storage on network error
 async function fetchWithColdStartFallback(url, options = {}) {
   const { timeout, ...fetchOptions } = options

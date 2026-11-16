@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+﻿import React, { useState } from 'react'
+import { motion as Motion, AnimatePresence } from 'motion/react'
 
 /**
  * AnimateCopyButton - Morphing spring animated copy button from Animate UI registry pattern.
@@ -29,7 +29,7 @@ export function AnimateCopyButton({
   }
 
   return (
-    <motion.button
+    <Motion.button
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.96 }}
       onClick={handleCopy}
@@ -56,7 +56,7 @@ export function AnimateCopyButton({
     >
       <AnimatePresence mode="wait" initial={false}>
         {copied ? (
-          <motion.span
+          <Motion.span
             key="check"
             initial={{ scale: 0.4, opacity: 0, rotate: -20 }}
             animate={{ scale: 1, opacity: 1, rotate: 0 }}
@@ -64,10 +64,10 @@ export function AnimateCopyButton({
             transition={{ type: 'spring', stiffness: 500, damping: 25 }}
             style={{ display: 'inline-flex', alignItems: 'center' }}
           >
-            ✓
-          </motion.span>
+            âœ“
+          </Motion.span>
         ) : (
-          <motion.span
+          <Motion.span
             key="copy"
             initial={{ scale: 0.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -75,8 +75,8 @@ export function AnimateCopyButton({
             transition={{ type: 'spring', stiffness: 500, damping: 25 }}
             style={{ display: 'inline-flex', alignItems: 'center' }}
           >
-            📋
-          </motion.span>
+            ðŸ“‹
+          </Motion.span>
         )}
       </AnimatePresence>
       {showLabel && (
@@ -84,6 +84,6 @@ export function AnimateCopyButton({
           {copied ? copiedLabel : label}
         </span>
       )}
-    </motion.button>
+    </Motion.button>
   )
 }

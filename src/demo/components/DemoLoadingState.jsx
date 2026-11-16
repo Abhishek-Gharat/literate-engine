@@ -23,36 +23,37 @@ export function DemoLoadingState({ onComplete, onCancel }) {
   useEffect(() => {
     const totalDuration = STEPS.reduce((sum, step) => sum + step.duration, 0)
     let elapsed = 0
-    
+    let lastActive = 0
+
     const interval = setInterval(() => {
       elapsed += 50
-      const newProgress = Math.min((elapsed / totalDuration) * 100, 100)
-      setProgress(newProgress)
-      
+      setProgress(Math.min((elapsed / totalDuration) * 100, 100))
+
       // Update current step based on elapsed time
       let timeAccumulator = 0
       let activeStep = 0
-      
+
       for (let i = 0; i < STEPS.length; i++) {
         timeAccumulator += STEPS[i].duration
         if (elapsed >= timeAccumulator - 200) {
           activeStep = i + 1
         }
       }
-      
-      if (activeStep > currentStep && activeStep <= STEPS.length) {
-        setCompletedSteps(prev => [...prev, STEPS[currentStep]?.id].filter(Boolean))
+
+      if (activeStep > lastActive && activeStep <= STEPS.length) {
+        setCompletedSteps(prev => [...prev, STEPS[lastActive]?.id].filter(Boolean))
         setCurrentStep(activeStep)
+        lastActive = activeStep
       }
-      
+
       if (elapsed >= totalDuration) {
         clearInterval(interval)
         setTimeout(() => onComplete?.(), 300)
       }
     }, 50)
-    
+
     return () => clearInterval(interval)
-  }, [onComplete, currentStep])
+  }, [onComplete])
 
   const containerStyle = {
     display: 'flex',

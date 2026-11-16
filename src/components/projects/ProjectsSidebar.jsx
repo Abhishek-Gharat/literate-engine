@@ -1,4 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
+
+const PAGE_SIZE = 12
 
 /**
  * ProjectsSidebar - Left sidebar with project list and creation
@@ -11,8 +13,28 @@ export default function ProjectsSidebar({
   isAnalyzing,
   onSelectProject,
   onCreateClick,
-  onRetry
+  onRetry,
+  onOpenComponents,
+  onOpenGraphs,
+  onOpenSettings
 }) {
+  const [search, setSearch] = useState('')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  const query = search.trim().toLowerCase()
+  const filteredProjects = query
+    ? projects.filter(p =>
+        p.name?.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query)
+      )
+    : projects
+  const visibleProjects = filteredProjects.slice(0, visibleCount)
+
+  const handleSearchChange = (event) => {
+    setSearch(event.target.value)
+    setVisibleCount(PAGE_SIZE)
+  }
+
   return (
     <aside style={{
       width: '280px',
@@ -152,6 +174,29 @@ export default function ProjectsSidebar({
         )}
       </div>
 
+      {projects.length > 8 && !projectsLoading && (
+        <div style={{ padding: '0 20px 8px' }}>
+          <input
+            type="text"
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Search projects..."
+            data-testid="project-search"
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '7px 10px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              color: '#e2e8f0',
+              fontSize: '12px',
+              outline: 'none'
+            }}
+          />
+        </div>
+      )}
+
       {/* Projects List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 16px' }}>
         {projectsLoading ? (
@@ -213,8 +258,13 @@ export default function ProjectsSidebar({
               Create your first project to get started
             </div>
           </div>
+        ) : filteredProjects.length === 0 ? (
+          <div data-testid="no-search-results" style={{ padding: '32px 0', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
+            No projects match "{search}"
+          </div>
         ) : (
-          projects.map(project => {
+          <>
+          {visibleProjects.map(project => {
             const isSelected = selectedProject?.id === project.id
             return (
               <div
@@ -289,8 +339,83 @@ export default function ProjectsSidebar({
                 </div>
               </div>
             )
-          })
+          })}
+          {filteredProjects.length > visibleProjects.length && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
+              data-testid="show-more-projects"
+              style={{
+                width: '100%',
+                marginTop: '6px',
+                padding: '8px 0',
+                background: 'transparent',
+                border: '1px dashed rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                color: '#94a3b8',
+                fontSize: '11px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Show more ({filteredProjects.length - visibleProjects.length} remaining)
+            </button>
+          )}
+          </>
         )}
+
+        <div style={{
+          marginTop: '20px',
+          padding: '0 8px',
+          color: '#64748b',
+          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+          fontSize: '11px',
+          fontWeight: '700',
+          letterSpacing: '1.2px',
+          textTransform: 'uppercase'
+        }}>System</div>
+
+        {[
+          { key: 'components', icon: '▣', label: 'Components', onClick: onOpenComponents },
+          { key: 'graphs', icon: '▦', label: 'Graphs', onClick: onOpenGraphs },
+          { key: 'settings', icon: '⚙', label: 'Settings', onClick: onOpenSettings },
+        ].map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={item.onClick}
+            data-testid={`system-${item.key}`}
+            style={{
+              height: '40px',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              color: '#94a3b8',
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              fontSize: '13px',
+              letterSpacing: '0.5px',
+              background: 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              padding: '0 8px',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#ffffff'
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = '#94a3b8'
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            <span style={{ width: '20px', textAlign: 'center' }}>{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
       </div>
 
       {/* Footer */}
@@ -334,9 +459,10 @@ export default function ProjectsSidebar({
         </button>
 
         <a
-          href="https://github.com/Abhishek-Gharat/literate-engine"
+          href="https://github.com/Abhishek-Gharat/literate-engine#readme"
           target="_blank"
           rel="noreferrer"
+          data-testid="documentation-link"
           style={{
             color: '#64748b',
             fontFamily: "'JetBrains Mono', 'Fira Code', monospace",

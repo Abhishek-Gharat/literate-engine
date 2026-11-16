@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+﻿import React, { useState } from 'react'
+import { motion as Motion, AnimatePresence } from 'motion/react'
 
 /**
  * AnimateTooltip - Spring-animated floating tooltip component based on Animate UI pattern.
@@ -56,7 +56,7 @@ export function AnimateTooltip({
       {children}
       <AnimatePresence>
         {isVisible && content && (
-          <motion.div
+          <Motion.div
             initial={{ opacity: 0, scale: 0.9, y: position === 'top' ? 4 : position === 'bottom' ? -4 : 0 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: position === 'top' ? 2 : position === 'bottom' ? -2 : 0 }}
@@ -81,7 +81,7 @@ export function AnimateTooltip({
             }}
           >
             {content}
-          </motion.div>
+          </Motion.div>
         )}
       </AnimatePresence>
     </div>

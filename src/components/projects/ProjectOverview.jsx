@@ -140,6 +140,46 @@ function ProjectOverviewContent({
     return diffs
   }, [runs])
 
+  if (!project) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        padding: '40px',
+        color: COLORS.text.secondary,
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📂</div>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, color: COLORS.text.primary, marginBottom: '8px' }}>
+          No Project Selected
+        </h2>
+        <p style={{ maxWidth: '400px', fontSize: '14px', lineHeight: 1.6, color: COLORS.text.muted, marginBottom: '24px' }}>
+          Select an existing project from the dropdown in the header, or create a new project to get started.
+        </p>
+        {onTryDemo && (
+          <button
+            onClick={onTryDemo}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              background: COLORS.primary.DEFAULT,
+              color: '#ffffff',
+              border: 'none',
+              fontWeight: 600,
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            ✦ Explore ShopApp Demo
+          </button>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="rv-overview">
       {/* ── Project Header Card ── */}

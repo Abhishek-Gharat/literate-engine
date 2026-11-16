@@ -54,6 +54,12 @@ test('prioritizeIssues detects orphan files as low severity', () => {
   assert.equal(result.issues[0].severity, SEVERITY.LOW)
 })
 
+test('prioritizeIssues tolerates null stats from an unanalysed project', () => {
+  const result = prioritizeIssues({ nodes: [], cyclicEdges: [], stats: null })
+  assert.deepEqual(result.issues, [])
+  assert.equal(result.counts.total, 0)
+})
+
 test('prioritizeIssues extracts top 3 actionable recommendations', () => {
   const nodes = [
     { id: 'src/Hub.js', label: 'Hub.js', imports: [], importedBy: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] },

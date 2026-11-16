@@ -1,11 +1,21 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { after, before, test } from 'node:test'
-import { createApp } from '../app.js'
+
+// Isolate the database in a temp dir BEFORE importing app modules —
+// server/db/init.js resolves DATA_DIR at import time.
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'reactviz-test-db-'))
+
+const { createApp } = await import('../app.js')
 
 let server
 let baseUrl
+let dataDir
 
 before(async () => {
+  dataDir = process.env.DATA_DIR
   const app = createApp()
 
   await new Promise((resolve) => {
@@ -19,6 +29,11 @@ before(async () => {
 
 after(async () => {
   await new Promise((resolve) => server.close(resolve))
+  try {
+    fs.rmSync(dataDir, { recursive: true, force: true })
+  } catch {
+    // Windows may briefly lock the sqlite file — best effort cleanup
+  }
 })
 
 test('POST /api/analysis returns canonical graph JSON', async () => {

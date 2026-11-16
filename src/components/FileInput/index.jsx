@@ -4,6 +4,7 @@ import UploadCenter from '../uploads/UploadCenter'
 import RunsSidebar from '../runs/RunsSidebar'
 import RunComparisonPanel from '../runs/RunComparisonPanel'
 import CreateProjectModal from '../modals/CreateProjectModal'
+import ComponentsModal from '../modals/ComponentsModal'
 import SettingsModal from '../modals/SettingsModal'
 import { AnimateTabs } from '../ui/animate'
 import { useFileInput } from '../../hooks/useFileInput'
@@ -33,6 +34,7 @@ export default function FileInput({
   demoRuns = []
 }) {
   const [showSettings, setShowSettings] = useState(false)
+  const [systemPanel, setSystemPanel] = useState(null) // 'components' | null
 
   const {
     mode,
@@ -89,6 +91,7 @@ export default function FileInput({
   const effectiveRunId = (demoMode && demoRuns?.length) ? (selectedRunId || demoRuns[0]?.id) : selectedRunId
   const effectiveSelectedRun = effectiveRuns.find(r => r.id === effectiveRunId) || (demoMode ? demoRuns[0] : null)
 
+  const latestNodes = effectiveRuns[0]?.snapshot?.nodes || []
   // Wrap handleLoadRun to ensure tab context is preserved
   const handleSelectRunWithContext = useCallback((runOrId) => {
     if (activeTab !== 'Runs') {
@@ -128,6 +131,9 @@ export default function FileInput({
           onSelectProject={onSelectProject}
           onCreateClick={openCreateForm}
           onRetry={loadProjects}
+          onOpenComponents={() => setSystemPanel('components')}
+          onOpenGraphs={() => onTabChange('Runs')}
+          onOpenSettings={() => setShowSettings(true)}
         />
       )}
 
@@ -202,6 +208,7 @@ export default function FileInput({
               <button
                 type="button"
                 onClick={() => setShowSettings(true)}
+                data-testid="header-settings-button"
                 title="Configure API key and AI settings"
                 style={{
                   padding: '7px 14px',
@@ -310,6 +317,13 @@ export default function FileInput({
         onDescriptionChange={setNewProjectDesc}
         onClose={closeCreateForm}
         onSubmit={createProjectHandler}
+      />
+
+      <ComponentsModal
+        isOpen={systemPanel === 'components'}
+        nodes={latestNodes}
+        projectName={selectedProject?.name || null}
+        onClose={() => setSystemPanel(null)}
       />
 
       <SettingsModal

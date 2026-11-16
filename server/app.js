@@ -37,8 +37,16 @@ export function createApp() {
     'http://localhost:5173', // Vite dev server
     'http://localhost:3000', // Alternative local dev
   ]
+  const localhostOriginRe = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
   app.use(cors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true)
+      if (corsOrigins.includes(origin)) return callback(null, true)
+      if (process.env.NODE_ENV !== 'production' && localhostOriginRe.test(origin)) {
+        return callback(null, true)
+      }
+      return callback(null, false)
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
