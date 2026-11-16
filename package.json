@@ -23,7 +23,7 @@
   "dependencies": {
     "@babel/parser": "^7.29.7",
     "@xyflow/react": "^12.10.1",
-    "better-sqlite3": "^11.0.0",
+    "better-sqlite3": "^12.11.1",
     "cors": "^2.8.5",
     "dagre": "^0.8.5",
     "express": "^5.2.1",
