@@ -1,64 +1,68 @@
 :root {
   /* ── Accent / Primary ── */
-  --color-primary: #ffffff;
-  --color-primary-light: #ffffff;
-  --color-primary-dark: #a1a1a1;
-  --color-primary-muted: rgba(255,255,255,0.13);
-  --color-primary-border: rgba(255,255,255,0.27);
+  --color-primary: #818cf8;
+  --color-primary-light: #a5b4fc;
+  --color-primary-dark: #6366f1;
+  --color-primary-muted: rgba(99, 102, 241, 0.16);
+  --color-primary-border: rgba(129, 140, 248, 0.35);
 
-  /* ── Backgrounds ── */
-  --bg-main: #000000;
-  --bg-panel: #0a0a0a;
-  --bg-card: #111111;
-  --bg-input: #0a0a0a;
-  --bg-hover: #1a1a1a;
-  --bg-surface: #0a0a0a;
-  --bg-elevated: #111111;
+  /* ── Backgrounds (Deep rich space palette) ── */
+  --bg-main: #07090e;
+  --bg-panel: rgba(13, 16, 25, 0.88);
+  --bg-card: rgba(20, 25, 38, 0.72);
+  --bg-input: rgba(15, 19, 30, 0.85);
+  --bg-hover: rgba(30, 38, 58, 0.65);
+  --bg-surface: #0a0d15;
+  --bg-elevated: #131724;
 
   /* ── Borders ── */
-  --border-default: rgba(255,255,255,0.10);
-  --border-light: rgba(255,255,255,0.20);
-  --border-muted: rgba(255,255,255,0.06);
-  --border-medium: rgba(255,255,255,0.20);
-  --border-subtle: rgba(255,255,255,0.10);
+  --border-default: rgba(255, 255, 255, 0.09);
+  --border-light: rgba(255, 255, 255, 0.18);
+  --border-muted: rgba(255, 255, 255, 0.05);
+  --border-medium: rgba(255, 255, 255, 0.22);
+  --border-subtle: rgba(255, 255, 255, 0.10);
 
   /* ── Text ── */
-  --text-primary: #ededed;
-  --text-secondary: #a1a1a1;
-  --text-muted: #71717a;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-dark: #475569;
 
   /* ── Accent variations ── */
-  --accent-default: #ffffff;
-  --accent-dim: #a1a1a1;
-  --accent-bright: #ffffff;
+  --accent-default: #818cf8;
+  --accent-dim: #6366f1;
+  --accent-bright: #a5b4fc;
 
-  /* ── Node type colors ── */
-  --node-root: #ffffff;
-  --node-component: #5a9e6f;
-  --node-hook: #b07a8a;
-  --node-page: #4a7c9b;
-  --node-external: #8a8a8a;
-  --node-index: #8b6fb0;
+  /* ── Node type colors (Modern vibrant devtools palette) ── */
+  --node-root: #f8fafc;
+  --node-component: #10b981;
+  --node-hook: #f43f5e;
+  --node-page: #38bdf8;
+  --node-external: #94a3b8;
+  --node-index: #a855f7;
 
   /* ── Status ── */
-  --status-success: #0cce6b;
-  --status-error: #ff5c5c;
-  --status-warning: #f5a623;
-  --status-info: #4a7c9b;
+  --status-success: #10b981;
+  --status-error: #f43f5e;
+  --status-warning: #f59e0b;
+  --status-info: #38bdf8;
 
   /* ── Edge ── */
-  --edge-default: rgba(255,255,255,0.25);
-  --edge-cyclic: #ff5c5c;
-  --edge-cyclic-bg: rgba(255,92,92,0.20);
+  --edge-default: rgba(148, 163, 184, 0.32);
+  --edge-cyclic: #f43f5e;
+  --edge-cyclic-bg: rgba(244, 63, 94, 0.20);
 
   /* ── Glass ── */
-  --glass-bg: rgba(0,0,0,0.80);
-  --glass-bg-heavy: rgba(0,0,0,0.95);
-  --glass-border: rgba(255,255,255,0.08);
-  --glass-border-heavy: rgba(255,255,255,0.12);
+  --glass-bg: rgba(13, 16, 25, 0.78);
+  --glass-bg-heavy: rgba(9, 11, 18, 0.94);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-border-heavy: rgba(255, 255, 255, 0.16);
 
-  /* ── Glow ── */
-  --glow-accent: rgba(255,255,255,0.12);
-  --glow-accent-strong: rgba(255,255,255,0.35);
-  --glow-accent-pulse: rgba(255,255,255,0.50);
+  /* ── Glow & Illumination ── */
+  --glow-accent: rgba(99, 102, 241, 0.20);
+  --glow-accent-strong: rgba(99, 102, 241, 0.45);
+  --glow-accent-pulse: rgba(129, 140, 248, 0.65);
+  --glow-cyan: rgba(56, 189, 248, 0.28);
+  --glow-rose: rgba(244, 63, 94, 0.28);
+  --glow-emerald: rgba(16, 185, 129, 0.28);
 }

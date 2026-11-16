@@ -9,16 +9,20 @@ import { NODE_LEGEND_ITEMS, COLORS, TYPOGRAPHY, BORDER_RADIUS } from '../../styl
  */
 function LegendItem({ label, color }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
       <div style={{
         width: '8px',
         height: '8px',
         borderRadius: '50%',
-        background: color
+        background: color,
+        boxShadow: `0 0 8px ${color}88`,
+        flexShrink: 0
       }} />
       <span style={{
-        fontSize: TYPOGRAPHY.size.md,
-        color: COLORS.text.secondary
+        fontSize: '12px',
+        color: '#cbd5e1',
+        fontWeight: '500',
+        letterSpacing: '0.2px'
       }}>{label}</span>
     </div>
   )

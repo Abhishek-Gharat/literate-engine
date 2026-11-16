@@ -9,15 +9,23 @@ const LOCAL_PROJECTS_KEY = 'reactviz_local_projects'
  * SettingsModal - Application settings: OpenRouter API key, local data
  * management, and about info.
  *
+ * Works either controlled (apiKey + onApiKeyChange from App) or standalone
+ * (falls back to the persisted key in useApiKey).
+ *
  * @param {Object} props
  * @param {boolean} props.isOpen
  * @param {Function} props.onClose
+ * @param {string} [props.apiKey]
+ * @param {Function} [props.onApiKeyChange]
  */
-export default function SettingsModal({ isOpen, onClose }) {
-  const { apiKey, handleApiKeyChange } = useApiKey()
+export default function SettingsModal({ isOpen, onClose, apiKey, onApiKeyChange }) {
+  const { apiKey: storedApiKey, handleApiKeyChange: storeApiKey } = useApiKey()
   const [cleared, setCleared] = useState(false)
 
   if (!isOpen) return null
+
+  const effectiveApiKey = onApiKeyChange ? (apiKey ?? '') : storedApiKey
+  const effectiveApiKeyChange = onApiKeyChange || storeApiKey
 
   const clearLocalProjects = () => {
     localStorage.removeItem(LOCAL_PROJECTS_KEY)
@@ -73,9 +81,9 @@ export default function SettingsModal({ isOpen, onClose }) {
             marginBottom: '10px'
           }}>AI · OpenRouter API Key</div>
           <ApiKeyInput
-            apiKey={apiKey}
+            apiKey={effectiveApiKey}
             showKey={true}
-            onKeyChange={handleApiKeyChange}
+            onKeyChange={effectiveApiKeyChange}
             onShowKeyToggle={() => {}}
           />
           <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#71717a', lineHeight: '1.5' }}>

@@ -13,7 +13,7 @@ export default defineConfig({
       // Exclude files that use Node's native test runner
       'src/analysis/*.test.js',
       'src/services/analysisApi.test.js',
-      'src/utils/graphAdapter.test.js',
+      'src/utils/*.test.js',
     ],
     setupFiles: ['./src/test-setup.js'],
   },

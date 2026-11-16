@@ -23,7 +23,9 @@ export default function NodeInspector({
   onSendMessage,
   onClearChat,
   onApiKeyChange,
-  onClose
+  onClose,
+  issues = [],
+  onSelectNodeByPath,
 }) {
   const [input, setInput] = useState('')
   const [showKey, setShowKey] = useState(false)
@@ -62,50 +64,9 @@ export default function NodeInspector({
     onClose()
   }
 
-  // ── COLLAPSED PILL ──
+  // ── COLLAPSED (HIDDEN) ──
   if (collapsed) {
-    return (
-      <div style={{
-        position: 'fixed',
-        bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-      }}>
-        <button
-          onClick={() => setCollapsed(false)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 20px',
-            background: '#111111',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '999px',
-            color: '#f5f5f5',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-            transition: 'all 0.2s',
-            fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#e2e2e266'; e.currentTarget.style.background = '#1a1a1a' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.background = '#111111' }}
-        >
-          <span style={{
-            width: '20px', height: '20px',
-            background: 'linear-gradient(135deg, #e2e2e2, #b0b0b0)',
-            borderRadius: '5px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '11px'
-          }}>✦</span>
-          Ask AI
-        </button>
-      </div>
-    )
+    return null
   }
 
   // ── EXPANDED FLOATING PANEL ──
@@ -278,7 +239,14 @@ export default function NodeInspector({
             impact={impact}
             showImpact={showImpact}
             onToggleImpact={onToggleImpact}
-            onSwitchToChat={() => setTab('chat')}
+            issues={issues}
+            onSelectNodeByPath={onSelectNodeByPath}
+            onSwitchToChat={(prompt) => {
+              setTab('chat')
+              if (prompt) {
+                setTimeout(() => handleSend(prompt), 50)
+              }
+            }}
           />
         )}
       </div>

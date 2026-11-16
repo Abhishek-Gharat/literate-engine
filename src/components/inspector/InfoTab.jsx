@@ -1,16 +1,18 @@
 import React from 'react'
 
 /**
- * InfoTab - Node information display
- *
- * @param {Object} props
- * @param {Object} props.node - Node data
- * @param {Object|null} props.impact - Blast radius result for the selected node
- * @param {boolean} props.showImpact - Whether impact highlighting is active on the graph
- * @param {Function} props.onToggleImpact - Callback to toggle graph impact highlighting
- * @param {Function} props.onSwitchToChat - Callback to switch to chat tab
+ * InfoTab - Comprehensive Node Architecture Inspector
+ * Provides dependency trace, impact analysis, risk signals, and contextual AI triggers.
  */
-export default function InfoTab({ node, impact, showImpact, onToggleImpact, onSwitchToChat }) {
+export default function InfoTab({
+  node,
+  impact,
+  showImpact,
+  onToggleImpact,
+  onSwitchToChat,
+  onSelectNodeByPath,
+  issues = [],
+}) {
   if (!node) {
     return (
       <div style={{
@@ -19,11 +21,11 @@ export default function InfoTab({ node, impact, showImpact, onToggleImpact, onSw
         alignItems: 'center',
         paddingTop: '40px',
         gap: '10px',
-        opacity: 0.3
+        opacity: 0.4
       }}>
         <div style={{ fontSize: '24px' }}>📋</div>
         <div style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>
-          Click a node to see its info
+          Select any node on the graph to inspect its architecture role, trace dependencies, and evaluate impact.
         </div>
       </div>
     )
@@ -34,235 +36,363 @@ export default function InfoTab({ node, impact, showImpact, onToggleImpact, onSw
     component: '#5a9e6f',
     hook: '#b07a8a',
     page: '#4a7c9b',
-    ghost: '#8a8a8a'
+    ghost: '#8a8a8a',
+    context: '#a855f7',
+    service: '#38bdf8',
   }
 
-  const color = TYPE_COLORS[node.nodeType] || '#e2e2e2'
+  const color = TYPE_COLORS[node.nodeType] || '#818cf8'
   const importCount = node.imports?.length || 0
   const usedByCount = node.importedBy?.length || 0
+  const totalImpact = impact?.total ?? usedByCount
+
+  // Determine Architecture Role
+  const getArchitectureRole = () => {
+    const label = node.label || node.id || ''
+    if (label.includes('Context')) return 'Context Provider / Global State'
+    if (label.startsWith('use') || node.nodeType === 'hook') return 'Custom React Hook'
+    if (node.nodeType === 'page' || label.includes('Page') || label.includes('View')) return 'Route Page / View Container'
+    if (label.includes('Service') || label.includes('Api') || label.includes('Client')) return 'Data / API Service'
+    if (label.includes('Util') || label.includes('Helper')) return 'Utility / Helper Module'
+    if (node.isGhost) return 'External / Third-party Dependency'
+    return 'UI Presentation Component'
+  }
+
+  // Determine Risk Level & Explanation
+  const getRiskInfo = () => {
+    if (totalImpact >= 12 || importCount >= 15 || usedByCount >= 8) {
+      return {
+        level: 'High',
+        color: '#ef4444',
+        bg: 'rgba(239, 68, 68, 0.15)',
+        border: 'rgba(239, 68, 68, 0.4)',
+        desc: `High blast radius (${totalImpact} affected modules) and heavy fan-in/out. Modifications carry significant regression risk.`
+      }
+    }
+    if (totalImpact >= 5 || importCount >= 8 || usedByCount >= 4) {
+      return {
+        level: 'Medium',
+        color: '#eab308',
+        bg: 'rgba(234, 179, 8, 0.15)',
+        border: 'rgba(234, 179, 8, 0.4)',
+        desc: `Moderate coupling (${usedByCount} direct callers). Changes will impact related features.`
+      }
+    }
+    return {
+      level: 'Low',
+      color: '#10b981',
+      bg: 'rgba(16, 185, 129, 0.15)',
+      border: 'rgba(16, 185, 129, 0.4)',
+      desc: 'Isolated or leaf module. Safe to refactor with minimal blast radius.'
+    }
+  }
+
+  const risk = getRiskInfo()
+
+  // Filter issues for this node
+  const nodeIssues = issues.filter(i => 
+    i.nodeId === node.id || 
+    i.secondaryNodeId === node.id || 
+    (Array.isArray(i.affectedNodes) && i.affectedNodes.includes(node.id))
+  )
+
+  const contextualPrompts = [
+    `Why is ${node.label} considered ${risk.level.toLowerCase()} risk?`,
+    `What modules will break if ${node.label} changes?`,
+    `How can I decouple ${node.label} to reduce its blast radius?`,
+    `Suggest a refactoring approach for ${node.label}.`,
+    `Explain the architectural purpose of ${node.label}.`,
+  ]
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-      {/* Node card */}
+    <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Node Identity Card */}
       <div style={{
-        background: '#1a1a1a',
-        border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: '10px',
+        background: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '12px',
         padding: '14px',
-        marginBottom: '16px'
+        position: 'relative',
+        overflow: 'hidden'
       }}>
         <div style={{
-          display: 'inline-block',
-          padding: '3px 10px',
-          background: `${color}22`,
-          border: `1px solid ${color}44`,
-          borderRadius: '4px',
-          marginBottom: '8px'
-        }}>
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '3px',
+          background: color
+        }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <span style={{
             fontSize: '10px',
             color: color,
             fontWeight: '700',
-            textTransform: 'uppercase'
-          }}>{node.nodeType}</span>
+            textTransform: 'uppercase',
+            letterSpacing: '0.6px',
+            padding: '2px 8px',
+            background: `${color}18`,
+            border: `1px solid ${color}44`,
+            borderRadius: '999px'
+          }}>
+            {node.nodeType}
+          </span>
+          <span style={{
+            fontSize: '10px',
+            color: risk.color,
+            fontWeight: '700',
+            padding: '2px 8px',
+            background: risk.bg,
+            border: `1px solid ${risk.border}`,
+            borderRadius: '4px'
+          }}>
+            Risk: {risk.level}
+          </span>
         </div>
+
         <div style={{
           fontFamily: "'JetBrains Mono', monospace",
-          fontSize: '15px',
-          fontWeight: '500',
-          color: '#f5f5f5',
-          wordBreak: 'break-word'
-        }}>{node.label}</div>
-      </div>
-
-      {/* Stats grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '10px',
-        marginBottom: '16px'
-      }}>
-        {[
-          { label: 'Imports', value: importCount, color: '#7c3aed' },
-          { label: 'Used by', value: usedByCount, color: '#22c55e' },
-          { label: 'Type', value: node.nodeType?.toUpperCase(), color },
-          { label: 'Status', value: node.isGhost ? 'External' : 'Local', color: node.isGhost ? '#475569' : '#0891b2' },
-        ].map((stat, i) => (
-          <div key={i} style={{
-            background: '#1a1a1a',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '8px',
-            padding: '12px'
-          }}>
-            <div style={{ fontSize: '11px', color: '#6b6b6b', marginBottom: '6px' }}>
-              {stat.label}
-            </div>
-            <div style={{
-              fontSize: '16px',
-              fontWeight: '700',
-              color: stat.color,
-              fontFamily: 'monospace'
-            }}>{stat.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Blast radius */}
-      {impact && (
-        <div style={{
-          background: '#1a1a1a',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '8px',
-          padding: '12px',
-          marginBottom: '16px'
+          fontSize: '14px',
+          fontWeight: '700',
+          color: '#f8fafc',
+          wordBreak: 'break-word',
+          lineHeight: '1.4'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{
-              fontSize: '11px',
-              color: '#6b6b6b',
+          {node.label}
+        </div>
+
+        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
+          <strong>Role:</strong> {getArchitectureRole()}
+        </div>
+      </div>
+
+      {/* Change Impact (Blast Radius) */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: '10px',
+        padding: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '13px' }}>💥</span>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+              Change Impact Analysis
+            </span>
+          </div>
+          <span style={{
+            fontSize: '12px',
+            fontWeight: '700',
+            fontFamily: 'monospace',
+            color: totalImpact > 0 ? '#f59e0b' : '#10b981'
+          }}>
+            {totalImpact} affected
+          </span>
+        </div>
+
+        <div style={{ fontSize: '11.5px', color: '#94a3b8', lineHeight: '1.4', marginBottom: '10px' }}>
+          {totalImpact === 0
+            ? 'Leaf module: nothing in the analyzed codebase imports this file.'
+            : `${impact?.directCount || usedByCount} direct · ${impact?.indirectCount || 0} indirect dependents (up to ${impact?.maxDepth || 1} level${(impact?.maxDepth || 1) === 1 ? '' : 's'} deep).`}
+        </div>
+
+        {onToggleImpact && totalImpact > 0 && (
+          <button
+            onClick={onToggleImpact}
+            style={{
+              width: '100%',
+              padding: '7px 10px',
+              background: showImpact ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.06)',
+              border: `1px solid ${showImpact ? 'rgba(245, 158, 11, 0.6)' : 'rgba(255, 255, 255, 0.12)'}`,
+              borderRadius: '7px',
+              color: showImpact ? '#fde047' : '#f1f5f9',
+              fontSize: '11.5px',
               fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '0.8px'
-            }}>Blast Radius</span>
-            <span style={{
-              fontSize: '12px',
-              fontWeight: '700',
-              fontFamily: 'monospace',
-              color: impact.total > 0 ? '#f5a623' : '#22c55e'
-            }}>{impact.total} file{impact.total === 1 ? '' : 's'}</span>
-          </div>
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>{showImpact ? '✦' : '◉'}</span>
+            <span>{showImpact ? 'Impact Highlight Active (Click to Hide)' : 'View Impact Graph'}</span>
+          </button>
+        )}
+      </div>
 
-          <div style={{ fontSize: '11px', color: '#6b6b6b', marginBottom: impact.total > 0 ? '10px' : 0 }}>
-            {impact.total === 0
-              ? 'Nothing imports this file — safe to change.'
-              : `${impact.directCount} direct · ${impact.indirectCount} transitive · up to ${impact.maxDepth} step${impact.maxDepth === 1 ? '' : 's'} away`}
-          </div>
+      {/* Dependency Trace: Imports vs Dependents */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: '10px',
+        padding: '12px'
+      }}>
+        <div style={{
+          fontSize: '11px',
+          fontWeight: '700',
+          color: '#f8fafc',
+          textTransform: 'uppercase',
+          letterSpacing: '0.6px',
+          marginBottom: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          <span>🔗</span> Dependency Trace
+        </div>
 
-          {impact.ordered.length > 0 && (
-            <div style={{ maxHeight: '140px', overflowY: 'auto', marginBottom: impact.total > 0 && onToggleImpact ? '10px' : 0 }}>
-              {impact.ordered.map((entry) => (
-                <div key={entry.id} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '5px 8px',
-                  marginBottom: '3px',
-                  background: '#111111',
-                  borderRadius: '5px',
-                  fontSize: '11px'
-                }}>
-                  <span style={{
-                    flexShrink: 0,
-                    width: '22px',
-                    textAlign: 'center',
-                    padding: '1px 0',
+        {/* Outgoing: Imports */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>
+            <span><strong>Imports</strong> (Outgoing)</span>
+            <span>{importCount}</span>
+          </div>
+          {importCount === 0 ? (
+            <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', padding: '4px 0' }}>None (Root / Leaf)</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '120px', overflowY: 'auto' }}>
+              {node.imports.map((imp, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => onSelectNodeByPath?.(imp)}
+                  style={{
+                    padding: '4px 8px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    borderLeft: '2px solid #818cf8',
                     borderRadius: '4px',
-                    fontSize: '9px',
-                    fontWeight: '700',
+                    fontSize: '11px',
                     fontFamily: 'monospace',
-                    color: entry.depth === 1 ? '#f5a623' : '#94a3b8',
-                    border: `1px solid ${entry.depth === 1 ? '#f5a62355' : '#94a3b833'}`
-                  }}>d{entry.depth}</span>
-                  <span style={{
-                    color: entry.depth === 1 ? '#ffffff' : '#a1a1a1',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>{entry.label}</span>
+                    color: '#c7d2fe',
+                    cursor: onSelectNodeByPath ? 'pointer' : 'default',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                  title={onSelectNodeByPath ? `Focus ${imp}` : undefined}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{imp}</span>
+                  {onSelectNodeByPath && <span style={{ opacity: 0.5, fontSize: '9px' }}>→</span>}
                 </div>
               ))}
             </div>
           )}
+        </div>
 
-          {impact.total > 0 && onToggleImpact && (
-            <button
-              onClick={onToggleImpact}
-              style={{
-                width: '100%',
-                padding: '8px',
-                background: showImpact ? '#f5a62322' : '#111111',
-                border: showImpact ? '1px solid #f5a62366' : '1px solid rgba(255,255,255,0.15)',
-                borderRadius: '6px',
-                color: showImpact ? '#f5a623' : '#ededed',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '600'
-              }}
-            >
-              {showImpact ? '✦ Highlighting on graph — click to hide' : 'Show impact on graph'}
-            </button>
+        {/* Incoming: Dependents (Used By) */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>
+            <span><strong>Used By</strong> (Dependents)</span>
+            <span>{usedByCount}</span>
+          </div>
+          {usedByCount === 0 ? (
+            <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', padding: '4px 0' }}>None (Orphan / Top-level Page)</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '120px', overflowY: 'auto' }}>
+              {node.importedBy.map((caller, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => onSelectNodeByPath?.(caller)}
+                  style={{
+                    padding: '4px 8px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    borderLeft: '2px solid #10b981',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontFamily: 'monospace',
+                    color: '#a7f3d0',
+                    cursor: onSelectNodeByPath ? 'pointer' : 'default',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                  title={onSelectNodeByPath ? `Focus ${caller}` : undefined}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{caller}</span>
+                  {onSelectNodeByPath && <span style={{ opacity: 0.5, fontSize: '9px' }}>→</span>}
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Imports */}
-      {node.imports?.length > 0 && (
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{
-            fontSize: '11px',
-            color: '#6b6b6b',
-            fontWeight: '600',
-            textTransform: 'uppercase',
-            letterSpacing: '0.8px',
-            marginBottom: '8px'
-          }}>Imports</div>
-          {node.imports.map((imp, i) => (
-            <div key={i} style={{
-              padding: '7px 10px',
-              marginBottom: '4px',
-              background: '#1a1a1a',
-              borderRadius: '6px',
-              borderLeft: '2px solid #e2e2e2',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontFamily: "'JetBrains Mono', monospace"
-            }}>{imp}</div>
-          ))}
+      {/* Relevant Issues */}
+      {nodeIssues.length > 0 && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.06)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          borderRadius: '10px',
+          padding: '12px'
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: '700', color: '#f87171', textTransform: 'uppercase', marginBottom: '8px' }}>
+            ⚠️ Issues Affecting This Node ({nodeIssues.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {nodeIssues.map((iss) => (
+              <div key={iss.id} style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: '1.4' }}>
+                • <strong>{iss.title}</strong>: {iss.reason}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Used By */}
-      {node.importedBy?.length > 0 && (
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{
-            fontSize: '11px',
-            color: '#6b6b6b',
-            fontWeight: '600',
-            textTransform: 'uppercase',
-            letterSpacing: '0.8px',
-            marginBottom: '8px'
-          }}>Used By</div>
-          {node.importedBy.map((imp, i) => (
-            <div key={i} style={{
-              padding: '7px 10px',
-              marginBottom: '4px',
-              background: '#1a1a1a',
-              borderRadius: '6px',
-              borderLeft: '2px solid #5a9e6f',
-              color: '#86efac',
-              fontSize: '12px',
-              fontFamily: "'JetBrains Mono', monospace"
-            }}>{imp}</div>
+      {/* Contextual AI Actions */}
+      <div style={{
+        background: 'rgba(99, 102, 241, 0.06)',
+        border: '1px solid rgba(99, 102, 241, 0.2)',
+        borderRadius: '10px',
+        padding: '12px'
+      }}>
+        <div style={{
+          fontSize: '11px',
+          fontWeight: '700',
+          color: '#a5b4fc',
+          textTransform: 'uppercase',
+          letterSpacing: '0.6px',
+          marginBottom: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          <span>✦</span> Contextual AI Actions
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {contextualPrompts.map((prompt, i) => (
+            <button
+              key={i}
+              onClick={() => onSwitchToChat?.(prompt)}
+              style={{
+                textAlign: 'left',
+                padding: '6px 10px',
+                background: 'rgba(15, 23, 42, 0.6)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '6px',
+                color: '#e2e8f0',
+                fontSize: '11px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.5)'
+                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'
+                e.currentTarget.style.background = 'rgba(15, 23, 42, 0.6)'
+              }}
+            >
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{prompt}</span>
+              <span style={{ color: '#818cf8', fontSize: '10px', flexShrink: 0 }}>→</span>
+            </button>
           ))}
         </div>
-      )}
-
-      {/* Ask in chat button */}
-      <button
-        onClick={onSwitchToChat}
-        style={{
-          width: '100%',
-          padding: '10px',
-          background: '#e2e2e222',
-          border: '1px solid #e2e2e244',
-          borderRadius: '8px',
-          color: '#ffffff',
-          cursor: 'pointer',
-          fontSize: '13px',
-          fontWeight: '600'
-        }}
-      >💬 Ask AI about this file →</button>
+      </div>
     </div>
   )
 }

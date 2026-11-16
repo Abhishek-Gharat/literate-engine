@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import ProjectsSidebar from '../projects/ProjectsSidebar'
 import UploadCenter from '../uploads/UploadCenter'
 import RunsSidebar from '../runs/RunsSidebar'
@@ -6,24 +6,12 @@ import RunComparisonPanel from '../runs/RunComparisonPanel'
 import CreateProjectModal from '../modals/CreateProjectModal'
 import ComponentsModal from '../modals/ComponentsModal'
 import SettingsModal from '../modals/SettingsModal'
+import { AnimateTabs } from '../ui/animate'
 import { useFileInput } from '../../hooks/useFileInput'
 
 /**
  * FileInput - Main dashboard component
  * Orchestrates ProjectsSidebar, UploadCenter, and RunsSidebar
- * 
- * @param {Object} props
- * @param {Function} props.onFilesReady - Callback when files are ready
- * @param {boolean} props.analyzing - External analyzing state
- * @param {string} props.analysisError - External analysis error
- * @param {Object|null} props.selectedProject - Currently selected project
- * @param {Function} props.onSelectProject - Callback when project is selected
- * @param {Function} props.onLoadRun - Callback when run is loaded
- * @param {string|null} props.selectedRunId - Currently selected run ID
- * @param {Function} props.onSelectRun - Callback when run is selected
- * @param {Function} props.onRunsChange - Callback when runs change
- * @param {string} props.activeTab - Currently active tab
- * @param {Function} props.onTabChange - Callback when tab changes
  */
 export default function FileInput({
   onFilesReady,
@@ -37,8 +25,17 @@ export default function FileInput({
   onRunsChange,
   onTryDemo,
   activeTab,
-  onTabChange
+  onTabChange,
+  apiKey = '',
+  onApiKeyChange,
+  hideHeader = false,
+  hideProjectsSidebar = false,
+  demoMode = false,
+  demoRuns = []
 }) {
+  const [showSettings, setShowSettings] = useState(false)
+  const [systemPanel, setSystemPanel] = useState(null) // 'components' | null
+
   const {
     mode,
     setMode,
@@ -75,10 +72,11 @@ export default function FileInput({
     onLoadRun,
     onSelectRun,
     onRunsChange,
-    analyzing
+    analyzing,
+    selectedProject
   })
 
-    // Load runs when project changes - use the ID string to avoid infinite loops
+  // Load runs when project changes - use the ID string to avoid infinite loops
   const selectedProjectId = selectedProject?.id
   useEffect(() => {
     if (selectedProjectId) {
@@ -86,12 +84,15 @@ export default function FileInput({
     }
   }, [selectedProjectId, loadRuns])
 
-  // Find the currently selected run object
-  const selectedRun = runs.find(r => r.id === selectedRunId)
+  // Effective runs: if demoMode or demoRuns provided, use demoRuns
+  const effectiveRuns = (demoMode && demoRuns?.length) ? demoRuns : runs
+  const effectiveRunId = (demoMode && demoRuns?.length) ? (selectedRunId || demoRuns[0]?.id) : selectedRunId
+  const effectiveSelectedRun = effectiveRuns.find(r => r.id === effectiveRunId) || (demoMode ? demoRuns[0] : null)
+
+  const latestNodes = effectiveRuns[0]?.snapshot?.nodes || []
 
   // Wrap handleLoadRun to ensure tab context is preserved
   const handleSelectRunWithContext = useCallback((runOrId) => {
-    // Ensure we're on Runs tab when loading a run (for back navigation context)
     if (activeTab !== 'Runs') {
       onTabChange('Runs')
     }
@@ -100,146 +101,158 @@ export default function FileInput({
 
   const hasAnalysisError = error || analysisError
 
-  const [systemPanel, setSystemPanel] = useState(null) // 'components' | 'settings' | null
-  const latestRun = runs[0] || null
-  const latestNodes = latestRun?.snapshot?.nodes || []
-  const openComponentsPanel = useCallback(() => setSystemPanel('components'), [])
-  const openSettingsPanel = useCallback(() => setSystemPanel('settings'), [])
-
-  const tabs = ['Dashboard','Runs']
+  const dashboardTabs = [
+    { id: 'Dashboard', label: 'Architecture Workspace', icon: '📊' },
+    { id: 'Runs', label: 'Runs History', icon: '🕘', badge: effectiveRuns?.length || 0 }
+  ]
 
   return (
-  <div
-  style={{
-    display: 'flex',
-    flex: 1,
-    width: '100%',
-    minWidth: 0,
-    height: '100vh',
-    background: '#000000',
-    color: '#ededed',
-    fontFamily: 'Inter, ui-sans-serif, system-ui',
-    overflow: 'hidden'
-  }}
->
-      <ProjectsSidebar
-        projects={projects}
-        projectsLoading={projectsLoading}
-        projectsError={projectsError}
-        selectedProject={selectedProject}
-        isAnalyzing={isAnalyzing}
-        onSelectProject={onSelectProject}
-        onCreateClick={openCreateForm}
-        onRetry={loadProjects}
-        onOpenComponents={openComponentsPanel}
-        onOpenGraphs={() => onTabChange('Runs')}
-        onOpenSettings={openSettingsPanel}
-      />
+    <div
+      style={{
+        display: 'flex',
+        flex: 1,
+        width: '100%',
+        minWidth: 0,
+        height: '100vh',
+        background: '#07090e',
+        color: '#ededed',
+        fontFamily: 'Inter, ui-sans-serif, system-ui',
+        overflow: 'hidden'
+      }}
+    >
+      {!hideProjectsSidebar && (
+        <ProjectsSidebar
+          projects={projects}
+          projectsLoading={projectsLoading}
+          projectsError={projectsError}
+          selectedProject={selectedProject}
+          isAnalyzing={isAnalyzing}
+          onSelectProject={onSelectProject}
+          onCreateClick={openCreateForm}
+          onRetry={loadProjects}
+          onOpenComponents={() => setSystemPanel('components')}
+          onOpenGraphs={() => onTabChange('Runs')}
+          onOpenSettings={() => setShowSettings(true)}
+        />
+      )}
 
       <main style={{
         flex: 1,
         minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
-        background: '#000000'
+        background: '#07090e'
       }}>
-        <header style={{
-          height: '64px',
-          flexShrink: 0,
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 32px',
-          boxSizing: 'border-box',
-          gap: '32px'
-        }}>
-          <h1 style={{
-            margin: 0,
-            color: '#ffffff',
-            fontSize: '20px',
-            fontWeight: '800',
-            letterSpacing: '0.5px',
-            textShadow: 'none'
-          }}>⚡ ReactViz</h1>
-          <nav style={{ display: 'flex', alignItems: 'stretch', gap: '32px', height: '100%' }}>
-            {tabs.map(tab => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => onTabChange(tab)}
-                style={{
-                  position: 'relative',
-                  padding: '0',
-                  background: 'transparent',
-                  border: 'none',
-                  color: activeTab === tab ? '#ffffff' : '#a1a1a1',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: activeTab === tab ? '800' : '600'
-                }}
-              >
-                {tab}
-                {activeTab === tab && (
-                  <span style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: '0',
-                    height: '2px',
-                    background: '#ffffff'
-                  }} />
-                )}
-              </button>
-            ))}
-          </nav>
-          <div style={{
-            marginLeft: 'auto',
+        {!hideHeader && (
+          <header style={{
+            height: '64px',
+            flexShrink: 0,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'rgba(10, 14, 23, 0.85)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px'
+            padding: '0 28px',
+            boxSizing: 'border-box',
+            gap: '24px'
           }}>
-            <button
-              type="button"
-              onClick={openComponentsPanel}
-              data-testid="header-components-button"
-              title="Component library"
-              style={{
-                background: 'transparent', border: 'none',
-                color: '#ededed', fontSize: '20px',
-                cursor: 'pointer', lineHeight: 1,
-                padding: '4px 6px', borderRadius: '6px'
-              }}
-            >♢</button>
-            <button
-              type="button"
-              onClick={openSettingsPanel}
-              data-testid="header-settings-button"
-              title="Settings"
-              style={{
-                background: 'transparent', border: 'none',
-                color: '#ededed', fontSize: '20px',
-                cursor: 'pointer', lineHeight: 1,
-                padding: '4px 6px', borderRadius: '6px'
-              }}
-            >⚙</button>
+            {/* AnimateTabs for Header Tabs */}
+            <div>
+              <AnimateTabs
+                tabs={dashboardTabs}
+                activeTab={activeTab}
+                onChange={onTabChange}
+                layoutId="dashboard-header-tab-indicator"
+                tabStyle={{
+                  fontSize: '13.5px',
+                  fontWeight: '700',
+                  padding: '7px 16px',
+                  height: '36px'
+                }}
+              />
+            </div>
+
+            {/* Right Header Controls */}
             <div style={{
-              width: '40px',
-              height: '40px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '10px',
-              background: '#111111',
-              boxShadow: 'none',
+              marginLeft: 'auto',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              fontWeight: '800',
-              fontSize: '16px'
-            }} title={selectedProject?.name || 'No project selected'}>
-              {selectedProject?.name ? selectedProject.name.charAt(0).toUpperCase() : '·'}
+              gap: '12px'
+            }}>
+              <button
+                type="button"
+                onClick={onTryDemo}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25))',
+                  border: '1px solid rgba(129, 140, 248, 0.45)',
+                  color: '#e0e7ff',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 10px rgba(99, 102, 241, 0.2)',
+                  transition: 'all 0.18s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <span>✦</span> Launch Demo Project
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSettings(true)}
+                data-testid="header-settings-button"
+                title="Configure API key and AI settings"
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: apiKey ? '#34d399' : '#cbd5e1',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
+              >
+                <span>⚙</span>
+                <span>Settings</span>
+                {apiKey ? (
+                  <span style={{
+                    width: '6px', height: '6px', borderRadius: '50%', background: '#10b981'
+                  }} />
+                ) : null}
+              </button>
+
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                background: 'rgba(16, 185, 129, 0.08)',
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+                fontSize: '11.5px',
+                color: '#34d399',
+                fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
+              }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                <span>Ready</span>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {activeTab === 'Runs' ? (
           <div style={{
@@ -251,8 +264,8 @@ export default function FileInput({
           }}>
             <div style={{ flexShrink: 0 }}>
               <RunComparisonPanel
-                runs={runs}
-                currentRun={selectedRun}
+                runs={effectiveRuns}
+                currentRun={effectiveSelectedRun}
                 selectedProject={selectedProject}
               />
             </div>
@@ -262,11 +275,11 @@ export default function FileInput({
               overflowY: 'auto'
             }}>
               <RunsSidebar
-                runs={runs}
-                loading={runsLoading}
-                error={runsError}
+                runs={effectiveRuns}
+                loading={demoMode ? false : runsLoading}
+                error={demoMode ? null : runsError}
                 selectedProject={selectedProject}
-                selectedRunId={selectedRunId}
+                selectedRunId={effectiveRunId}
                 isAnalyzing={isAnalyzing}
                 onRetry={() => selectedProject && loadRuns(selectedProject.id)}
                 onSelectRun={handleSelectRunWithContext}
@@ -279,7 +292,7 @@ export default function FileInput({
             setMode={setMode}
             githubUrl={githubUrl}
             setGithubUrl={setGithubUrl}
-            runs={runs}
+            runs={effectiveRuns}
             selectedProject={selectedProject}
             isAnalyzing={isAnalyzing}
             hasAnalysisError={hasAnalysisError}
@@ -313,8 +326,10 @@ export default function FileInput({
       />
 
       <SettingsModal
-        isOpen={systemPanel === 'settings'}
-        onClose={() => setSystemPanel(null)}
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        apiKey={apiKey}
+        onApiKeyChange={onApiKeyChange}
       />
     </div>
   )

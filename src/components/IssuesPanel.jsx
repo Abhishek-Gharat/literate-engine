@@ -1,40 +1,31 @@
-import React from 'react'
+import React, { useState, useMemo } from 'react'
+import { prioritizeIssues, SEVERITY } from '../utils/issuePrioritizer.js'
 
-export function IssuesPanel({ nodes, cyclicEdges, onNodeClick, isOpen, onToggle }) {
-  // Calculate issues from real data
-  const orphanFiles = nodes.filter(n => 
-    n.data && 
-    (!n.data.imports || n.data.imports.length === 0) && 
-    (!n.data.importedBy || n.data.importedBy.length === 0)
-  )
+export function IssuesPanel({
+  nodes = [],
+  cyclicEdges = [],
+  edges = [],
+  stats = {},
+  onNodeClick,
+  onViewImpact,
+  isOpen,
+  onToggle,
+  onRefactorIssue,
+  hideTrigger = false,
+}) {
+  const [filterSeverity, setFilterSeverity] = useState('all')
 
-  const mostConnected = nodes.length > 0 
-    ? nodes.reduce((max, n) => {
-        const connections = (n.data?.imports?.length || 0) + (n.data?.importedBy?.length || 0)
-        const maxConnections = (max.data?.imports?.length || 0) + (max.data?.importedBy?.length || 0)
-        return connections > maxConnections ? n : max
-      })
-    : null
+  const { issues, counts, recommendations } = useMemo(() => {
+    return prioritizeIssues({ nodes, edges, cyclicEdges, stats })
+  }, [nodes, edges, cyclicEdges, stats])
 
-  const topRefactorTarget = nodes.length > 0
-    ? nodes.reduce((max, n) => {
-        const usedBy = n.data?.importedBy?.length || 0
-        const maxUsedBy = max.data?.importedBy?.length || 0
-        return usedBy > maxUsedBy ? n : max
-      })
-    : null
+  const filteredIssues = useMemo(() => {
+    if (filterSeverity === 'all') return issues
+    return issues.filter(i => i.severity === filterSeverity)
+  }, [issues, filterSeverity])
 
-  const circularCount = cyclicEdges?.length || 0
-  const orphanCount = orphanFiles.length
-  const totalIssues = circularCount + orphanCount
-
-  // Don't show anything if no issues and not explicitly opened
-  if (totalIssues === 0 && !mostConnected && !isOpen) {
-    return null
-  }
-
-  // Compact button when panel is closed
   if (!isOpen) {
+    if (hideTrigger) return null
     return (
       <button
         onClick={onToggle}
@@ -45,87 +36,95 @@ export function IssuesPanel({ nodes, cyclicEdges, onNodeClick, isOpen, onToggle 
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          padding: '10px 16px',
-          background: '#111111',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '8px',
-          color: '#f5f5f5',
-          fontSize: '13px',
+          padding: '8px 14px',
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          borderRadius: '10px',
+          color: '#f8fafc',
+          fontSize: '12px',
           fontWeight: '600',
           cursor: 'pointer',
           zIndex: 10,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-          transition: 'all 0.2s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = '#e2e2e2'
-          e.currentTarget.style.background = '#1a1a1a'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
-          e.currentTarget.style.background = '#111111'
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+          transition: 'all 0.18s ease',
         }}
       >
-        <span style={{ fontSize: '14px' }}>⚠️</span>
+        <span style={{ fontSize: '13px' }}>⚠️</span>
         <span>Issues</span>
-        {totalIssues > 0 && (
+        {counts.total > 0 && (
           <span style={{
             padding: '2px 8px',
-            background: circularCount > 0 ? '#b07a8a' : '#b0b0b0',
-            borderRadius: '12px',
+            background: counts.critical > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+            border: `1px solid ${counts.critical > 0 ? 'rgba(239, 68, 68, 0.5)' : 'rgba(245, 158, 11, 0.5)'}`,
+            borderRadius: '999px',
             fontSize: '11px',
-            fontWeight: '600',
-            color: '#fff',
+            fontWeight: '700',
+            color: counts.critical > 0 ? '#fca5a5' : '#fde68a',
           }}>
-            {totalIssues}
+            {counts.total}
           </span>
         )}
       </button>
     )
   }
 
+  const getSeverityBadge = (severity) => {
+    switch (severity) {
+      case SEVERITY.CRITICAL:
+        return { label: 'CRITICAL', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)' }
+      case SEVERITY.HIGH:
+        return { label: 'HIGH', color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.4)' }
+      case SEVERITY.MEDIUM:
+        return { label: 'MEDIUM', color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.4)' }
+      default:
+        return { label: 'LOW', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.4)' }
+    }
+  }
+
   return (
-    <div style={{
-      position: 'absolute',
-      top: '16px',
-      right: '16px',
-      width: '280px',
-      background: '#111111',
-      border: '1px solid rgba(255,255,255,0.12)',
-      borderRadius: '10px',
-      padding: '16px',
-      zIndex: 10,
-      boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
-    }}>
+    <div
+      data-testid="smart-issues-panel"
+      style={{
+        position: 'absolute',
+        top: '16px',
+        right: '16px',
+        width: '360px',
+        maxHeight: 'calc(100vh - 120px)',
+        background: 'rgba(11, 15, 25, 0.96)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        borderRadius: '16px',
+        padding: '16px',
+        zIndex: 20,
+        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.6)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        marginBottom: '16px',
+        justifyContent: 'space-between',
         paddingBottom: '12px',
-        borderBottom: '1px solid rgba(255,255,255,0.12)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        marginBottom: '12px',
+        flexShrink: 0,
       }}>
-        <span style={{ fontSize: '16px' }}>⚠️</span>
-        <span style={{ 
-          fontSize: '14px', 
-          fontWeight: '600', 
-          color: '#f5f5f5',
-        }}>Architecture Issues</span>
-        {totalIssues > 0 && (
-          <span style={{
-            marginLeft: 'auto',
-            marginRight: '8px',
-            padding: '2px 8px',
-            background: circularCount > 0 ? '#b07a8a22' : '#b0b0b022',
-            border: `1px solid ${circularCount > 0 ? '#b07a8a' : '#b0b0b0'}`,
-            borderRadius: '12px',
-            fontSize: '11px',
-            fontWeight: '600',
-            color: circularCount > 0 ? '#b07a8a' : '#b0b0b0',
-          }}>
-            {totalIssues}
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '16px' }}>⚠️</span>
+          <div>
+            <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#f8fafc' }}>
+              Architecture Issues
+            </div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+              {counts.total} issue{counts.total === 1 ? '' : 's'} prioritized by graph risk
+            </div>
+          </div>
+        </div>
         <button
           onClick={onToggle}
           style={{
@@ -136,19 +135,10 @@ export function IssuesPanel({ nodes, cyclicEdges, onNodeClick, isOpen, onToggle 
             justifyContent: 'center',
             background: 'transparent',
             border: 'none',
-            borderRadius: '4px',
-            color: '#6b6b6b',
-            fontSize: '16px',
+            borderRadius: '6px',
+            color: '#94a3b8',
+            fontSize: '18px',
             cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-            e.currentTarget.style.color = '#f5f5f5'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = '#6b6b6b'
           }}
           title="Close panel"
         >
@@ -156,179 +146,271 @@ export function IssuesPanel({ nodes, cyclicEdges, onNodeClick, isOpen, onToggle 
         </button>
       </div>
 
-      {/* Circular Dependencies */}
-      {circularCount > 0 && (
-        <div style={{ marginBottom: '16px' }}>
+      {/* "What should I fix first?" — Top Recommendations */}
+      {recommendations.length > 0 && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.08)',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
+          borderRadius: '10px',
+          padding: '10px 12px',
+          marginBottom: '14px',
+          flexShrink: 0,
+        }}>
           <div style={{
+            fontSize: '10.5px',
+            fontWeight: '700',
+            color: '#f87171',
+            textTransform: 'uppercase',
+            letterSpacing: '0.6px',
+            marginBottom: '6px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            marginBottom: '8px',
+            gap: '6px'
           }}>
-            <span style={{ fontSize: '12px', color: '#b07a8a' }}>🔄</span>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#b07a8a' }}>
-              Circular Dependencies ({circularCount})
-            </span>
+            <span>🎯</span> Recommended Next Steps
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {cyclicEdges.slice(0, 3).map((edge, i) => (
-              <div key={i} style={{
-                padding: '8px 10px',
-                background: '#1a1a1a',
-                borderRadius: '6px',
-                fontSize: '11px',
-                color: '#a0a0a0',
-                fontFamily: "'JetBrains Mono', monospace",
-                cursor: 'pointer',
-              }} onClick={() => onNodeClick?.({ data: { label: edge.source } })}>
-                <span style={{ color: '#b07a8a' }}>{edge.source}</span>
-                <span style={{ margin: '0 4px' }}>↔</span>
-                <span style={{ color: '#b07a8a' }}>{edge.target}</span>
+            {recommendations.map((rec) => (
+              <div
+                key={rec.id}
+                onClick={() => {
+                  const node = nodes.find(n => n.id === rec.nodeId)
+                  if (node) onNodeClick?.(node)
+                  if (rec.actionType === 'impact' && onViewImpact) onViewImpact(rec.nodeId)
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '5px 8px',
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(248, 113, 113, 0.5)'
+                  e.currentTarget.style.background = 'rgba(15, 23, 42, 0.9)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)'
+                  e.currentTarget.style.background = 'rgba(15, 23, 42, 0.6)'
+                }}
+                title={rec.reason}
+              >
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  color: '#f87171',
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>{rec.rank}</span>
+                <span style={{
+                  fontSize: '11px',
+                  color: '#f1f5f9',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1
+                }}>{rec.title}</span>
+                <span style={{ fontSize: '10px', color: '#94a3b8' }}>→</span>
               </div>
             ))}
-            {circularCount > 3 && (
-              <div style={{
-                fontSize: '11px',
-                color: '#6b6b6b',
-                textAlign: 'center',
-                padding: '4px',
-              }}>
-                +{circularCount - 3} more
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* Orphan Files */}
-      {orphanCount > 0 && (
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '8px',
-          }}>
-            <span style={{ fontSize: '12px', color: '#b0b0b0' }}>👻</span>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#b0b0b0' }}>
-              Unreferenced Files ({orphanCount})
-            </span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {orphanFiles.slice(0, 3).map((node, i) => (
-              <div key={i} style={{
-                padding: '6px 10px',
-                background: '#1a1a1a',
-                borderRadius: '6px',
-                fontSize: '11px',
-                color: '#a0a0a0',
-                fontFamily: "'JetBrains Mono', monospace",
-                cursor: 'pointer',
-              }} onClick={() => onNodeClick?.(node)}>
-                {node.data?.label || node.id}
-              </div>
-            ))}
-            {orphanCount > 3 && (
-              <div style={{
-                fontSize: '11px',
-                color: '#6b6b6b',
-                textAlign: 'center',
-                padding: '4px',
-              }}>
-                +{orphanCount - 3} more
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Most Connected Component */}
-      {mostConnected && (
-        <div style={{ marginBottom: '16px' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '8px',
-          }}>
-            <span style={{ fontSize: '12px', color: '#8b6fb0' }}>🔗</span>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#8b6fb0' }}>
-              Most Connected
-            </span>
-          </div>
-          <div style={{
-            padding: '10px',
-            background: '#1a1a1a',
-            borderRadius: '6px',
-            border: '1px solid rgba(255,255,255,0.12)',
-            cursor: 'pointer',
-          }} onClick={() => onNodeClick?.(mostConnected)}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#f5f5f5',
-              fontFamily: "'JetBrains Mono', monospace",
-              marginBottom: '4px',
-              wordBreak: 'break-word',
-            }}>
-              {mostConnected.data?.label || mostConnected.id}
-            </div>
-            <div style={{
+      {/* Severity Filter Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '4px',
+        marginBottom: '10px',
+        flexShrink: 0,
+        background: 'rgba(255, 255, 255, 0.03)',
+        padding: '3px',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+      }}>
+        {[
+          { id: 'all', label: 'All', count: counts.total },
+          { id: SEVERITY.CRITICAL, label: 'Critical', count: counts.critical, color: '#ef4444' },
+          { id: SEVERITY.HIGH, label: 'High', count: counts.high, color: '#f97316' },
+          { id: SEVERITY.MEDIUM, label: 'Med', count: counts.medium, color: '#eab308' },
+          { id: SEVERITY.LOW, label: 'Low', count: counts.low, color: '#94a3b8' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setFilterSeverity(tab.id)}
+            style={{
+              flex: 1,
+              padding: '4px 6px',
+              background: filterSeverity === tab.id ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              border: 'none',
+              borderRadius: '6px',
+              color: filterSeverity === tab.id ? (tab.color || '#ffffff') : '#64748b',
+              fontSize: '10.5px',
+              fontWeight: filterSeverity === tab.id ? '700' : '500',
+              cursor: 'pointer',
               display: 'flex',
-              gap: '12px',
-              fontSize: '11px',
-              color: '#6b6b6b',
-            }}>
-              <span>↓ {(mostConnected.data?.imports?.length || 0)} imports</span>
-              <span>↑ {(mostConnected.data?.importedBy?.length || 0)} used by</span>
-            </div>
-          </div>
-        </div>
-      )}
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+            }}
+          >
+            <span>{tab.label}</span>
+            <span style={{ opacity: 0.7, fontSize: '9.5px' }}>({tab.count})</span>
+          </button>
+        ))}
+      </div>
 
-      {/* Top Refactor Target */}
-      {topRefactorTarget && (topRefactorTarget.data?.importedBy?.length || 0) > 3 && (
-        <div>
+      {/* Issues List */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        paddingRight: '2px',
+      }}>
+        {filteredIssues.length === 0 ? (
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '8px',
+            padding: '32px 16px',
+            textAlign: 'center',
+            color: '#64748b',
+            fontSize: '12px'
           }}>
-            <span style={{ fontSize: '12px', color: '#b0b0b0' }}>🔧</span>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#b0b0b0' }}>
-              Refactor Target
-            </span>
-          </div>
-          <div style={{
-            padding: '10px',
-            background: '#1a1a1a',
-            borderRadius: '6px',
-            border: '1px solid rgba(255,255,255,0.12)',
-            cursor: 'pointer',
-          }} onClick={() => onNodeClick?.(topRefactorTarget)}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#f5f5f5',
-              fontFamily: "'JetBrains Mono', monospace",
-              marginBottom: '6px',
-              wordBreak: 'break-word',
-            }}>
-              {topRefactorTarget.data?.label || topRefactorTarget.id}
-            </div>
-            <div style={{
-              fontSize: '11px',
-              color: '#6b6b6b',
-              lineHeight: '1.5',
-            }}>
-              Used by {(topRefactorTarget.data?.importedBy?.length || 0)} components
-              <br />
-              Consider splitting or abstracting
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>✓</div>
+            <div>No {filterSeverity !== 'all' ? `${filterSeverity} ` : ''}issues found.</div>
+            <div style={{ fontSize: '11px', marginTop: '4px', color: '#475569' }}>
+              Architecture is clean in this category.
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          filteredIssues.map((issue) => {
+            const badge = getSeverityBadge(issue.severity)
+            return (
+              <div
+                key={issue.id}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: `1px solid ${badge.border}`,
+                  borderRadius: '10px',
+                  padding: '10px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontSize: '9.5px',
+                    fontWeight: '800',
+                    color: badge.color,
+                    background: badge.bg,
+                    border: `1px solid ${badge.border}`,
+                    letterSpacing: '0.4px'
+                  }}>
+                    {badge.label}
+                  </span>
+                  {issue.affectedCount > 0 && (
+                    <span style={{ fontSize: '10.5px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                      {issue.affectedCount} affected module{issue.affectedCount === 1 ? '' : 's'}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#f8fafc',
+                  lineHeight: '1.4'
+                }}>
+                  {issue.title}
+                </div>
+
+                <div style={{
+                  fontSize: '11px',
+                  color: '#94a3b8',
+                  lineHeight: '1.4',
+                }}>
+                  {issue.reason}
+                </div>
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => {
+                      const node = nodes.find(n => n.id === issue.nodeId)
+                      if (node) onNodeClick?.(node)
+                    }}
+                    style={{
+                      padding: '3px 8px',
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '5px',
+                      color: '#e2e8f0',
+                      fontSize: '10.5px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🔍 Inspect Node
+                  </button>
+
+                  {issue.type === 'coupling' && onViewImpact && (
+                    <button
+                      onClick={() => onViewImpact(issue.nodeId)}
+                      style={{
+                        padding: '3px 8px',
+                        background: 'rgba(245, 158, 11, 0.15)',
+                        border: '1px solid rgba(245, 158, 11, 0.35)',
+                        borderRadius: '5px',
+                        color: '#fde047',
+                        fontSize: '10.5px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      💥 View Impact
+                    </button>
+                  )}
+
+                  {issue.type === 'cycle' && onRefactorIssue && (
+                    <button
+                      onClick={() => onRefactorIssue({
+                        type: 'cycle',
+                        source: issue.nodeId,
+                        target: issue.secondaryNodeId,
+                      })}
+                      style={{
+                        padding: '3px 8px',
+                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(168, 85, 247, 0.25))',
+                        border: '1px solid rgba(239, 68, 68, 0.5)',
+                        borderRadius: '5px',
+                        color: '#fce7f3',
+                        fontSize: '10.5px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✨ Auto-Fix
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
     </div>
   )
 }

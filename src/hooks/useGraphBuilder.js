@@ -38,25 +38,31 @@ export function useGraphBuilder() {
 
     try {
       let analysis
-      
-      // Check if we should skip API and go straight to local analysis
-      const apiUrl = import.meta.env.VITE_REACTVIZ_API_URL
-      const shouldTryApi = apiUrl && apiUrl.trim() !== ''
-      
-      if (shouldTryApi) {
-        try {
-          analysis = await analyzeFilesWithApi(files, projectId)
-        } catch (apiError) {
-          console.log('API failed, falling back to local analysis:', apiError.message)
-          if (!localFallbackEnabled()) {
-            throw apiError
-          }
-          analysis = await analyzeFilesLocally(files)
+      // Always attempt backend analysis first (works via relative /api or configured API_URL)
+      try {
+        analysis = await analyzeFilesWithApi(files, projectId)
+      } catch (apiError) {
+        console.warn('API analysis failed or unavailable, falling back to local analysis:', apiError.message)
+        if (!localFallbackEnabled()) {
+          throw apiError
         }
-      } else {
-        // No API configured, use local analysis directly
-        console.log('No API URL configured, using local analysis')
         analysis = await analyzeFilesLocally(files)
+        // If projectId is present and local fallback was used, create a local run
+        if (projectId && !analysis.runId) {
+          try {
+            const { createLocalRun } = await import('../services/runsApi')
+            const localRun = createLocalRun(
+              projectId,
+              analysis,
+              analysis.stats,
+              analysis.unresolvedImports,
+              analysis.analysisErrors
+            )
+            analysis.runId = localRun.id
+          } catch (e) {
+            console.warn('Failed to save local run:', e)
+          }
+        }
       }
 
       applyAnalysis(analysis)
