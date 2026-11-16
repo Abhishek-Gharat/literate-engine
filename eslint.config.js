@@ -16,6 +16,8 @@ export default defineConfig([
     'superpowers',
     'test_temp',
     '.od-skills',
+    // Nested git worktrees — checked out copies, not source
+    '.kilo',
   ]),
   {
     files: ['**/*.{js,jsx}'],
