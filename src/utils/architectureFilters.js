@@ -13,7 +13,7 @@ export function classifyNodeType(node) {
 
   if (type === 'page' || id.includes('/pages/') || id.includes('/views/')) return 'pages'
   if (type === 'hook' || id.includes('/hooks/') || label.startsWith('use')) return 'hooks'
-  if (type === 'context' || id.includes('/context/') || label.includes('context')) return 'contexts'
+  if (type === 'context' || type === 'index' || id.includes('/context/') || label.includes('context')) return 'contexts'
   if (id.includes('/services/') || id.includes('/api/') || label.includes('service') || label.includes('client')) return 'services'
   if (id.includes('/utils/') || id.includes('/helpers/') || label.includes('util')) return 'utils'
   if (type === 'component' || id.includes('/components/')) return 'components'
@@ -95,6 +95,7 @@ export function searchArchitectureNodes(nodes = [], query = '') {
     const id = node.id.toLowerCase()
     const label = (node.label || node.data?.label || '').toLowerCase()
     const type = (node.nodeType || node.data?.nodeType || '').toLowerCase()
+    const filePath = (node.filePath || node.data?.filePath || '').toLowerCase()
     const signals = node.signals || node.data?.signals || {}
     const hooksUsed = (signals.hooks || []).map(h => h.toLowerCase())
     const contextsUsed = (signals.contextConsumers || []).map(c => c.toLowerCase())
@@ -103,6 +104,7 @@ export function searchArchitectureNodes(nodes = [], query = '') {
       id.includes(q) ||
       label.includes(q) ||
       type.includes(q) ||
+      filePath.includes(q) ||
       hooksUsed.some(h => h.includes(q)) ||
       contextsUsed.some(c => c.includes(q))
 

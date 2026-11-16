@@ -118,3 +118,25 @@ test('scoreToGrade and getHealthColor follow the band contract', () => {
   assert.equal(getHealthColor(90), '#0cce6b')
   assert.equal(getHealthColor(null), '#a1a1a1')
 })
+
+test('computeHealthScore exposes explainable base score, penalties, and summary', () => {
+  const nodes = [
+    makeNode('a.jsx', ['./b.jsx'], []),
+    makeNode('b.jsx', ['./a.jsx'], ['a.jsx']),
+    makeNode('orphan.jsx'),
+  ]
+  const cyclicEdges = [{ source: 'a.jsx', target: 'b.jsx' }]
+  const result = computeHealthScore({ nodes, cyclicEdges, unresolvedImports: 2 })
+
+  assert.equal(result.baseScore, 100)
+  assert.ok(result.totalPenalty > 0)
+  assert.equal(result.score, Math.max(0, 100 - result.totalPenalty))
+  assert.ok(Array.isArray(result.summary))
+  assert.ok(result.summary.length > 0)
+
+  // Verify breakdown items have penalty and explanation fields
+  for (const item of result.breakdown) {
+    assert.equal(typeof item.penalty, 'number')
+    assert.equal(typeof item.explanation, 'string')
+  }
+})

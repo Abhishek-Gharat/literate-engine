@@ -101,7 +101,7 @@ export const DEMO_NODES = [
     label: 'main.jsx',
     nodeType: 'root',
     filePath: 'src/main.jsx',
-    imports: ['App', 'CartProvider', 'AuthProvider'],
+    imports: ['app', 'cartcontext', 'authcontext'],
     importedBy: [],
     isEntryPoint: true
   },
@@ -111,8 +111,8 @@ export const DEMO_NODES = [
     label: 'Home.jsx',
     nodeType: 'page',
     filePath: 'src/pages/Home.jsx',
-    imports: ['useProducts', 'ProductCard', 'SearchBar'],
-    importedBy: ['App'],
+    imports: ['useproducts', 'productcard', 'searchbar'],
+    importedBy: ['app'],
     isEntryPoint: false
   },
   {
@@ -120,8 +120,8 @@ export const DEMO_NODES = [
     label: 'Product.jsx',
     nodeType: 'page',
     filePath: 'src/pages/Product.jsx',
-    imports: ['useProducts', 'useCart'],
-    importedBy: ['App'],
+    imports: ['useproducts', 'usecart'],
+    importedBy: ['app'],
     isEntryPoint: false
   },
   {
@@ -129,8 +129,8 @@ export const DEMO_NODES = [
     label: 'Cart.jsx',
     nodeType: 'page',
     filePath: 'src/pages/Cart.jsx',
-    imports: ['useCart'],
-    importedBy: ['App'],
+    imports: ['usecart'],
+    importedBy: ['app'],
     isEntryPoint: false
   },
   {
@@ -138,8 +138,8 @@ export const DEMO_NODES = [
     label: 'Checkout.jsx',
     nodeType: 'page',
     filePath: 'src/pages/Checkout.jsx',
-    imports: ['CheckoutForm', 'useCart'],
-    importedBy: ['App'],
+    imports: ['checkoutform', 'usecart'],
+    importedBy: ['app'],
     isEntryPoint: false
   },
   // Components
@@ -148,8 +148,8 @@ export const DEMO_NODES = [
     label: 'Navbar.jsx',
     nodeType: 'component',
     filePath: 'src/components/Navbar.jsx',
-    imports: ['useCart', 'useAuth'],
-    importedBy: ['Home', 'Product', 'Cart', 'Checkout'],
+    imports: ['usecart', 'authcontext'],
+    importedBy: ['home', 'product', 'cart', 'checkout'],
     isEntryPoint: false
   },
   {
@@ -157,8 +157,8 @@ export const DEMO_NODES = [
     label: 'ProductCard.jsx',
     nodeType: 'component',
     filePath: 'src/components/ProductCard.jsx',
-    imports: ['useCart'],
-    importedBy: ['Home'],
+    imports: ['usecart'],
+    importedBy: ['home'],
     isEntryPoint: false
   },
   {
@@ -166,8 +166,8 @@ export const DEMO_NODES = [
     label: 'SearchBar.jsx',
     nodeType: 'component',
     filePath: 'src/components/SearchBar.jsx',
-    imports: ['useSearch'],
-    importedBy: ['Home'],
+    imports: ['usesearch'],
+    importedBy: ['home'],
     isEntryPoint: false
   },
   {
@@ -175,8 +175,8 @@ export const DEMO_NODES = [
     label: 'CartDrawer.jsx',
     nodeType: 'component',
     filePath: 'src/components/CartDrawer.jsx',
-    imports: ['useCart'],
-    importedBy: ['App'],
+    imports: ['usecart'],
+    importedBy: ['app'],
     isEntryPoint: false
   },
   {
@@ -184,8 +184,8 @@ export const DEMO_NODES = [
     label: 'CheckoutForm.jsx',
     nodeType: 'component',
     filePath: 'src/components/CheckoutForm.jsx',
-    imports: ['useCart'],
-    importedBy: ['Checkout'],
+    imports: ['usecart'],
+    importedBy: ['checkout'],
     isEntryPoint: false
   },
   // Hooks
@@ -195,7 +195,7 @@ export const DEMO_NODES = [
     nodeType: 'hook',
     filePath: 'src/hooks/useProducts.js',
     imports: [],
-    importedBy: ['Home', 'Product'],
+    importedBy: ['home', 'product'],
     isEntryPoint: false
   },
   {
@@ -204,7 +204,7 @@ export const DEMO_NODES = [
     nodeType: 'hook',
     filePath: 'src/hooks/useCart.js',
     imports: [],
-    importedBy: ['Cart', 'Checkout', 'ProductCard', 'CheckoutForm', 'CartDrawer', 'Navbar'],
+    importedBy: ['cart', 'checkout', 'productcard', 'checkoutform', 'cartdrawer', 'navbar'],
     isEntryPoint: false
   },
   {
@@ -213,7 +213,7 @@ export const DEMO_NODES = [
     nodeType: 'hook',
     filePath: 'src/hooks/useSearch.js',
     imports: [],
-    importedBy: ['SearchBar'],
+    importedBy: ['searchbar'],
     isEntryPoint: false
   },
   // Contexts
@@ -223,7 +223,7 @@ export const DEMO_NODES = [
     nodeType: 'index',
     filePath: 'src/context/CartContext.jsx',
     imports: [],
-    importedBy: ['main', 'useCart'],
+    importedBy: ['main', 'usecart'],
     isEntryPoint: false
   },
   {
@@ -232,7 +232,7 @@ export const DEMO_NODES = [
     nodeType: 'index',
     filePath: 'src/context/AuthContext.jsx',
     imports: [],
-    importedBy: ['main', 'Navbar'],
+    importedBy: ['main', 'navbar'],
     isEntryPoint: false
   },
   // Config
@@ -241,7 +241,7 @@ export const DEMO_NODES = [
     label: 'App.jsx',
     nodeType: 'component',
     filePath: 'src/App.jsx',
-    imports: ['Navbar', 'CartDrawer', 'Home', 'Product', 'Cart', 'Checkout'],
+    imports: ['navbar', 'cartdrawer', 'home', 'product', 'cart', 'checkout'],
     importedBy: ['main'],
     isEntryPoint: false
   }

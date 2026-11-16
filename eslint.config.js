@@ -34,7 +34,9 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // `motion` is a namespace object used as <motion.div> — ESLint core does
+      // not count member-expression JSX usage, so it needs an explicit opt-out.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^(?:[A-Z_]|motion$)' }],
     },
   },
   // Vitest test files use global test APIs (vitest.config.js has globals: true)

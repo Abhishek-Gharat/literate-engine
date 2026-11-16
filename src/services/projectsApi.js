@@ -71,7 +71,7 @@ async function fetchWithColdStartFallback(url, options = {}) {
   } catch (error) {
     clearTimeout(timeoutId)
     backendAvailable = false
-    throw error
+    throw handleApiError(error)
   }
 }
 

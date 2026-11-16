@@ -4,7 +4,7 @@ import {
   recordsToDepMap,
   resolveImportRecords,
 } from '../utils/importParser.js'
-import { detectCycles, isCyclicEdge } from '../utils/cycleDetector.js'
+import { detectCycles, isCyclicEdge, countCycles } from '../utils/cycleDetector.js'
 import { computeHealthScore } from '../utils/healthScore.js'
 
 const SOURCE_EXTENSIONS = /\.(jsx?|tsx?)$/
@@ -81,7 +81,7 @@ function buildUnresolvedImports(importRecords) {
 }
 
 function countUniqueCycles(cyclicEdges) {
-  return cyclicEdges.length > 0 ? cyclicEdges.length / 2 : 0
+  return countCycles(cyclicEdges)
 }
 
 const EMPTY_NAME_SET = new Set()

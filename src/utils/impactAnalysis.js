@@ -16,28 +16,52 @@
 export function computeBlastRadius(sourceId, nodes = []) {
   const safeNodes = Array.isArray(nodes) ? nodes : []
   const byId = new Map()
+  const byLower = new Map()
 
   for (const node of safeNodes) {
     if (!node?.id) continue
-    byId.set(node.id, {
+    const data = {
+      id: node.id,
       label: node.data?.label || node.label || node.id,
       imports: node.imports || node.data?.imports || [],
       importedBy: node.importedBy || node.data?.importedBy || [],
-    })
+    }
+    byId.set(node.id, data)
+    byLower.set(node.id.toLowerCase(), data)
+    if (data.label) {
+      byLower.set(data.label.toLowerCase(), data)
+      const base = data.label.replace(/\.[^/.]+$/, '').toLowerCase()
+      byLower.set(base, data)
+    }
   }
 
-  if (!sourceId || !byId.has(sourceId)) return null
+  const resolveNode = (key) => {
+    if (!key) return null
+    if (byId.has(key)) return byId.get(key)
+    const lower = String(key).toLowerCase()
+    if (byLower.has(lower)) return byLower.get(lower)
+    const base = lower.replace(/\.[^/.]+$/, '')
+    return byLower.get(base) || null
+  }
 
-  const visited = new Set([sourceId])
-  const queue = [{ id: sourceId, depth: 0 }]
+  const root = resolveNode(sourceId)
+  if (!root) return null
+
+  const canonicalSourceId = root.id
+  const visited = new Set([canonicalSourceId])
+  const queue = [{ id: canonicalSourceId, depth: 0 }]
   const affected = []
 
   while (queue.length > 0) {
     const { id, depth } = queue.shift()
-    for (const dependent of byId.get(id).importedBy) {
-      if (!byId.has(dependent) || visited.has(dependent)) continue
-      visited.add(dependent)
-      const entry = { id: dependent, depth: depth + 1 }
+    const current = resolveNode(id)
+    if (!current) continue
+
+    for (const rawDep of current.importedBy) {
+      const depNode = resolveNode(rawDep)
+      if (!depNode || visited.has(depNode.id)) continue
+      visited.add(depNode.id)
+      const entry = { id: depNode.id, depth: depth + 1 }
       affected.push(entry)
       queue.push(entry)
     }

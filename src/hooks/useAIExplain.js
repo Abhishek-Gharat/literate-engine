@@ -28,15 +28,25 @@ export function useAIExplain() {
 
   const buildContext = (nodeData, depMap, stats) => {
     if (nodeData) {
-      return `Currently looking at: ${nodeData.label}
-Type: ${nodeData.nodeType}
-Imports: ${nodeData.imports?.length > 0 ? nodeData.imports.join(', ') : 'none'}
-Used by: ${nodeData.importedBy?.length > 0 ? nodeData.importedBy.join(', ') : 'nothing — leaf or top-level file'}`
+      const fanIn = nodeData.importedBy?.length || 0
+      const fanOut = nodeData.imports?.length || 0
+      const signals = nodeData.signals || {}
+      return `Currently analyzing module: ${nodeData.label || nodeData.id}
+Architecture Type: ${nodeData.nodeType || 'module'}
+Dependencies (Imports): ${fanOut > 0 ? nodeData.imports.join(', ') : 'none (root/independent)'}
+Dependents (Used By): ${fanIn > 0 ? nodeData.importedBy.join(', ') : 'none (leaf/entry point)'}
+React Signals:
+- State Hooks: ${signals.stateHooks || 0}
+- Context Consumers: ${signals.contextConsumers?.length ? signals.contextConsumers.join(', ') : 'none'}
+- Memoized: ${signals.memoized ? 'yes' : 'no'}
+Dead Exports: ${nodeData.deadExports?.length ? nodeData.deadExports.join(', ') : 'none'}`
     }
     if (depMap && stats) {
-      return `Full project structure:
-${Object.entries(depMap).map(([f, imps]) => `${f} → [${imps.join(', ') || 'no imports'}]`).join('\n')}
-Stats: ${stats.totalFiles} files, ${stats.totalComponents} components, ${stats.totalHooks} hooks, ${stats.cyclesFound} circular deps`
+      return `Full project architecture:
+Total Files: ${stats.totalFiles || 0}, Components: ${stats.totalComponents || 0}, Hooks: ${stats.totalHooks || 0}
+Circular Dependencies: ${stats.cyclesFound || 0}, Unresolved Imports: ${stats.unresolvedImports || 0}
+Structure:
+${Object.entries(depMap).slice(0, 30).map(([f, imps]) => `${f} → [${imps.join(', ') || 'none'}]`).join('\n')}`
     }
     return ''
   }

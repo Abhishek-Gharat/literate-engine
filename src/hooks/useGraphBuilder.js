@@ -38,6 +38,7 @@ export function useGraphBuilder() {
 
     try {
       // Always attempt backend analysis first (works via relative /api or configured API_URL)
+      let analysis
       try {
         analysis = await analyzeFilesWithApi(files, projectId)
       } catch (apiError) {

@@ -46,25 +46,37 @@ function getLayoutedElements(nodes, edges, direction = 'TB') {
   }
 }
 
-function adaptApiNode(node, depMap) {
-  const allFiles = Object.keys(depMap)
+function adaptApiNode(node, depMap = {}) {
+  const isMap = depMap instanceof Map
+  const allFiles = isMap ? Array.from(depMap.keys()) : Object.keys(depMap || {})
   const isGhost = Boolean(node.isGhost)
   const isEntry = isEntryPoint(node.id)
-  const nodeType = isGhost ? 'ghost' : (isEntry ? 'entry' : (node.type || getNodeType(node.id)))
+  // Prefer the classification carried by the node itself (the engine and the
+  // demo fixtures both provide one) and only fall back to path heuristics.
+  const declaredType = node.nodeType || node.type
+  const nodeType = isGhost
+    ? 'ghost'
+    : (isEntry ? 'entry' : (declaredType || getNodeType(node.id)))
 
-    return {
+  const getImports = (id) => isMap ? depMap.get(id) : depMap[id]
+
+  return {
     id: node.id,
     type: 'componentNode',
     position: { x: 0, y: 0 },
     data: {
+      // `id` is kept on the data payload as well: inspectors and issue
+      // matching work on the selected node's *data* object, so without it
+      // `node.id` is undefined and every issue matches every node.
+      id: node.id,
       label: node.id,
       nodeType,
       isGhost,
       isEntryPoint: isEntry,
       signals: node.signals || null,
       deadExports: node.deadExports || [],
-      imports: node.imports || depMap[node.id] || [],
-      importedBy: node.importedBy || allFiles.filter((file) => depMap[file]?.includes(node.id)),
+      imports: node.imports || getImports(node.id) || [],
+      importedBy: node.importedBy || allFiles.filter((file) => getImports(file)?.includes(node.id)),
     },
   }
 }

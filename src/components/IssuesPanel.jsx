@@ -6,6 +6,7 @@ export function IssuesPanel({
   cyclicEdges = [],
   edges = [],
   stats = {},
+  unresolvedImports = [],
   onNodeClick,
   onViewImpact,
   isOpen,
@@ -16,8 +17,8 @@ export function IssuesPanel({
   const [filterSeverity, setFilterSeverity] = useState('all')
 
   const { issues, counts, recommendations } = useMemo(() => {
-    return prioritizeIssues({ nodes, edges, cyclicEdges, stats })
-  }, [nodes, edges, cyclicEdges, stats])
+    return prioritizeIssues({ nodes, edges, cyclicEdges, stats, unresolvedImports })
+  }, [nodes, edges, cyclicEdges, stats, unresolvedImports])
 
   const filteredIssues = useMemo(() => {
     if (filterSeverity === 'all') return issues
@@ -73,13 +74,13 @@ export function IssuesPanel({
   const getSeverityBadge = (severity) => {
     switch (severity) {
       case SEVERITY.CRITICAL:
-        return { label: 'CRITICAL', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)' }
+        return { label: '🔴 Critical', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)' }
       case SEVERITY.HIGH:
-        return { label: 'HIGH', color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.4)' }
+        return { label: '🔴 High', color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.4)' }
       case SEVERITY.MEDIUM:
-        return { label: 'MEDIUM', color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.4)' }
+        return { label: '🟠 Medium', color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.4)' }
       default:
-        return { label: 'LOW', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.4)' }
+        return { label: '🟡 Low', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.4)' }
     }
   }
 
@@ -345,6 +346,21 @@ export function IssuesPanel({
                   {issue.reason}
                 </div>
 
+                {/* Why it matters */}
+                {issue.whyItMatters && (
+                  <div style={{
+                    fontSize: '10.5px',
+                    color: '#cbd5e1',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    borderLeft: '2px solid rgba(255, 255, 255, 0.2)',
+                    padding: '5px 8px',
+                    borderRadius: '4px',
+                    lineHeight: '1.4'
+                  }}>
+                    <strong style={{ color: '#e2e8f0' }}>Why it matters:</strong> {issue.whyItMatters}
+                  </div>
+                )}
+
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                   <button
@@ -366,7 +382,7 @@ export function IssuesPanel({
                     🔍 Inspect Node
                   </button>
 
-                  {issue.type === 'coupling' && onViewImpact && (
+                  {(issue.type === 'coupling' || (issue.affectedCount && issue.affectedCount > 1)) && onViewImpact && (
                     <button
                       onClick={() => onViewImpact(issue.nodeId)}
                       style={{

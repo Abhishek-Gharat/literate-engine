@@ -14,16 +14,9 @@ export default function RefactorModal({
   onClose,
 }) {
   const [activeTab, setActiveTab] = useState('diffs') // 'diffs' | 'strategy' | 'patch'
-  const [copiedKey, setCopiedKey] = useState(null)
   const [showKeyConfig, setShowKeyConfig] = useState(false)
 
   if (!issue) return null
-
-  const handleCopy = (text, key) => {
-    navigator.clipboard.writeText(text)
-    setCopiedKey(key)
-    setTimeout(() => setCopiedKey(null), 2000)
-  }
 
   const handleDownloadPatch = () => {
     if (!plan?.patch) return

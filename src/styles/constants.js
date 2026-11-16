@@ -36,8 +36,10 @@ export const COLORS = {
   },
   node: {
     root: '#f8fafc',
+    entry: '#22d3ee',
     component: '#10b981',
     hook: '#f43f5e',
+    context: '#a855f7',
     page: '#38bdf8',
     external: '#94a3b8',
     index: '#a855f7',
@@ -233,9 +235,10 @@ export const commonStyles = {
 
 export const NODE_LEGEND_ITEMS = [
   { label: 'Root', color: COLORS.node.root },
-  { label: 'Entry Point', color: COLORS.node.page },
+  { label: 'Entry Point', color: COLORS.node.entry },
   { label: 'Component', color: COLORS.node.component },
   { label: 'Hook', color: COLORS.node.hook },
+  { label: 'Context', color: COLORS.node.context },
   { label: 'Page', color: COLORS.node.page },
   { label: 'External', color: COLORS.node.external },
 ]

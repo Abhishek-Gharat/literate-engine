@@ -29,7 +29,7 @@ export default function NodeInspector({
 }) {
   const [input, setInput] = useState('')
   const [showKey, setShowKey] = useState(false)
-  const [tab, setTab] = useState('chat')
+  const [tab, setTab] = useState('info')
   const [collapsed, setCollapsed] = useState(true)
   const [lastNode, setLastNode] = useState(null)
   const bottomRef = useRef(null)

@@ -42,7 +42,7 @@ Rules:
 /**
  * Builds a prompt digest for the refactoring LLM.
  */
-export function buildRefactorDigest(issue, { nodes = [], depMap = {}, files = [] } = {}) {
+export function buildRefactorDigest(issue, { depMap = {}, files = [] } = {}) {
   const fileContentMap = new Map()
   if (Array.isArray(files)) {
     files.forEach((f) => {

@@ -67,4 +67,21 @@ test('prioritizeIssues extracts top 3 actionable recommendations', () => {
   assert.ok(result.recommendations.length <= 3)
   assert.equal(result.recommendations[0].rank, 1)
   assert.equal(result.recommendations[1].rank, 2)
+  assert.ok(result.recommendations[0].whyItMatters)
+})
+
+test('prioritizeIssues flags unresolved imports as high severity with whyItMatters', () => {
+  const nodes = [
+    { id: 'src/services/api.js', label: 'api.js', imports: ['src/missing.js'], importedBy: [] }
+  ]
+  const unresolvedImports = [
+    { sourceFile: 'src/services/api.js', specifier: './missing.js', line: 3 }
+  ]
+
+  const result = prioritizeIssues({ nodes, unresolvedImports })
+  const unresolvedIssue = result.issues.find(i => i.type === 'unresolved')
+  assert.ok(unresolvedIssue)
+  assert.equal(unresolvedIssue.severity, SEVERITY.HIGH)
+  assert.ok(unresolvedIssue.whyItMatters.includes('bundler compilation errors'))
+  assert.ok(unresolvedIssue.actionableNextStep)
 })

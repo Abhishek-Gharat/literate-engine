@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { test, describe, it } from 'node:test'
+import { test } from 'node:test'
 import {
   classifyNodeType,
   getNodeRiskLevel,
@@ -42,4 +42,34 @@ test('architectureFilters - searchArchitectureNodes groups search results by cat
   assert.equal(result.total, 2)
   assert.equal(result.grouped.hooks.length, 1)
   assert.equal(result.grouped.contexts.length, 1)
+})
+
+test('architectureFilters - searchArchitectureNodes matches on filePath and handles empty queries', () => {
+  const nodes = [
+    { id: 'node1', label: 'CustomButton', filePath: 'src/components/ui/button.jsx', nodeType: 'component' },
+    { id: 'node2', label: 'Header', filePath: 'src/components/Header.jsx', nodeType: 'component' }
+  ]
+  const emptyRes = searchArchitectureNodes(nodes, '')
+  assert.equal(emptyRes.total, 0)
+  assert.equal(emptyRes.flat.length, 0)
+
+  const pathRes = searchArchitectureNodes(nodes, 'ui/button')
+  assert.equal(pathRes.total, 1)
+  assert.equal(pathRes.flat[0].label, 'CustomButton')
+})
+
+test('architectureFilters - evaluateNodeFilter handles issues filters', () => {
+  const cyclicNode = { id: 'src/A.js', isCyclic: true }
+  const cleanNode = { id: 'src/B.js', isCyclic: false, importedBy: ['c'] }
+  const highImpactNode = { id: 'src/C.js', importedBy: new Array(12) }
+
+  const filterOptions = {
+    issueFilter: 'cycles',
+    cyclicNodeIds: new Set(['src/A.js']),
+    highImpactNodeIds: new Set(['src/C.js']),
+  }
+
+  assert.equal(evaluateNodeFilter(cyclicNode, filterOptions), true)
+  assert.equal(evaluateNodeFilter(cleanNode, filterOptions), false)
+  assert.equal(evaluateNodeFilter(highImpactNode, { ...filterOptions, issueFilter: 'high_impact' }), true)
 })

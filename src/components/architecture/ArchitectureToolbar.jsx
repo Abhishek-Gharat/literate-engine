@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
-import { searchArchitectureNodes, classifyNodeType } from '../../utils/architectureFilters.js'
-import { computeHealthScore, scoreToGrade, getHealthColor } from '../../utils/healthScore.js'
+import { createPortal } from 'react-dom'
+import { searchArchitectureNodes } from '../../utils/architectureFilters.js'
+import { computeHealthScore, getHealthColor } from '../../utils/healthScore.js'
 
 export function ArchitectureToolbar({
   nodes = [],
-  edges = [],
   cyclicEdges = [],
   stats = {},
   searchTerm = '',
@@ -26,13 +26,21 @@ export function ArchitectureToolbar({
 }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [showHealthModal, setShowHealthModal] = useState(false)
-  const [showFilterMenu, setShowFilterMenu] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const searchContainerRef = useRef(null)
 
   // Search Results
   const searchResults = useMemo(() => {
     return searchArchitectureNodes(nodes, searchTerm)
   }, [nodes, searchTerm])
+
+  // Reset highlight index when query changes (adjust state during render
+  // instead of in an effect, to avoid a cascading extra render pass)
+  const [lastSearchTerm, setLastSearchTerm] = useState(searchTerm)
+  if (lastSearchTerm !== searchTerm) {
+    setLastSearchTerm(searchTerm)
+    setHighlightedIndex(-1)
+  }
 
   // Architecture Health Breakdown
   const healthData = useMemo(() => {
@@ -48,6 +56,34 @@ export function ArchitectureToolbar({
   const activeFilterCount = (typeFilter !== 'all' ? 1 : 0) +
     (riskFilter !== 'all' ? 1 : 0) +
     (issueFilter !== 'all' ? 1 : 0)
+
+  // Keyboard navigation for search dropdown
+  const handleSearchKeyDown = (e) => {
+    if (!isSearchFocused || searchResults.total === 0) return
+    const total = searchResults.flat.length
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightedIndex((prev) => (prev + 1 < total ? prev + 1 : 0))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightedIndex((prev) => (prev - 1 >= 0 ? prev - 1 : total - 1))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (highlightedIndex >= 0 && highlightedIndex < total) {
+        const item = searchResults.flat[highlightedIndex]
+        if (item) {
+          onSelectNode(item.raw)
+          setIsSearchFocused(false)
+        }
+      } else if (total > 0) {
+        onSelectNode(searchResults.flat[0].raw)
+        setIsSearchFocused(false)
+      }
+    } else if (e.key === 'Escape') {
+      setIsSearchFocused(false)
+    }
+  }
 
   // Close search popover on outside click
   useEffect(() => {
@@ -101,6 +137,7 @@ export function ArchitectureToolbar({
               value={searchTerm}
               onChange={e => onSearchChange(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
+              onKeyDown={handleSearchKeyDown}
               style={{
                 width: '100%',
                 padding: '6px 28px 6px 30px',
@@ -139,8 +176,8 @@ export function ArchitectureToolbar({
               position: 'absolute',
               top: 'calc(100% + 6px)',
               left: 0,
-              width: '320px',
-              maxHeight: '360px',
+              width: '340px',
+              maxHeight: '380px',
               overflowY: 'auto',
               background: 'rgba(15, 23, 42, 0.98)',
               backdropFilter: 'blur(20px)',
@@ -155,16 +192,35 @@ export function ArchitectureToolbar({
             }}>
               <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                flexDirection: 'column',
+                gap: '4px',
                 paddingBottom: '6px',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                fontSize: '11px',
-                color: '#94a3b8',
-                fontWeight: '600'
               }}>
-                <span>Matches ({searchResults.total})</span>
-                <span style={{ fontSize: '10px', color: '#64748b' }}>Click to focus node</span>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '11px',
+                  color: '#94a3b8',
+                  fontWeight: '600'
+                }}>
+                  <span>Matches ({searchResults.total})</span>
+                  <span style={{ fontSize: '10px', color: '#64748b' }}>↑↓ to navigate · ↵ to select</span>
+                </div>
+                {/* Compact category breakdown */}
+                {searchResults.total > 0 && (
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', fontSize: '9.5px', color: '#64748b' }}>
+                    {Object.entries(searchResults.grouped).map(([cat, items]) => {
+                      if (!items || items.length === 0) return null
+                      return (
+                        <span key={cat} style={{ background: 'rgba(255, 255, 255, 0.04)', padding: '1px 5px', borderRadius: '3px' }}>
+                          {cat}: {items.length}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {searchResults.total === 0 ? (
@@ -172,69 +228,61 @@ export function ArchitectureToolbar({
                   No architectural matches found for "{searchTerm}"
                 </div>
               ) : (
-                Object.entries(searchResults.grouped).map(([category, items]) => {
-                  if (!items || items.length === 0) return null
+                searchResults.flat.slice(0, 20).map((item, idx) => {
+                  const isHighlighted = idx === highlightedIndex
                   return (
-                    <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        onSelectNode(item.raw)
+                        setIsSearchFocused(false)
+                      }}
+                      style={{
+                        padding: '6px 8px',
+                        background: isHighlighted ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                        border: `1px solid ${isHighlighted ? 'rgba(99, 102, 241, 0.6)' : 'rgba(255, 255, 255, 0.06)'}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        transition: 'all 0.12s ease'
+                      }}
+                      onMouseEnter={() => setHighlightedIndex(idx)}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#f8fafc',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {item.label}
+                        </span>
+                        <span style={{
+                          fontSize: '9px',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          color: '#94a3b8'
+                        }}>
+                          {item.category}
+                        </span>
+                      </div>
                       <div style={{
                         fontSize: '10px',
-                        fontWeight: '700',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.6px',
-                        padding: '2px 4px'
+                        color: '#94a3b8',
+                        fontFamily: 'monospace',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
                       }}>
-                        {category} ({items.length})
+                        {item.id}
                       </div>
-                      {items.slice(0, 5).map(item => (
-                        <div
-                          key={item.id}
-                          onClick={() => {
-                            onSelectNode(item.raw)
-                            setIsSearchFocused(false)
-                          }}
-                          style={{
-                            padding: '6px 8px',
-                            background: 'rgba(255, 255, 255, 0.03)',
-                            border: '1px solid rgba(255, 255, 255, 0.06)',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '2px',
-                            transition: 'all 0.15s ease'
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.5)'
-                            e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)'
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'
-                          }}
-                        >
-                          <div style={{
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            color: '#f8fafc',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {item.label}
-                          </div>
-                          <div style={{
-                            fontSize: '10px',
-                            color: '#94a3b8',
-                            fontFamily: 'monospace',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {item.id}
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   )
                 })
@@ -479,58 +527,130 @@ export function ArchitectureToolbar({
           fontSize: '11px',
           color: '#94a3b8',
           paddingTop: '4px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.05)'
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          flexWrap: 'wrap'
         }}>
+          <span style={{ fontWeight: 600, color: '#e2e8f0' }}>
+            Filters ({activeFilterCount}):
+          </span>
           <span>Showing <strong>{totalFilteredCount}</strong> / {nodes.length} nodes</span>
+
           {typeFilter !== 'all' && (
-            <span style={{
-              background: 'rgba(99, 102, 241, 0.15)',
-              border: '1px solid rgba(99, 102, 241, 0.35)',
-              borderRadius: '4px',
-              padding: '1px 6px',
-              color: '#c7d2fe'
-            }}>
-              Type: {typeFilter}
-            </span>
+            <button
+              onClick={() => onTypeFilterChange('all')}
+              style={{
+                background: 'rgba(99, 102, 241, 0.15)',
+                border: '1px solid rgba(99, 102, 241, 0.35)',
+                borderRadius: '4px',
+                padding: '2px 8px',
+                color: '#c7d2fe',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Click to remove Type filter"
+            >
+              <span>Type: {typeFilter}</span>
+              <span style={{ fontSize: '12px', opacity: 0.8 }}>×</span>
+            </button>
           )}
+
           {riskFilter !== 'all' && (
-            <span style={{
-              background: 'rgba(245, 158, 11, 0.15)',
-              border: '1px solid rgba(245, 158, 11, 0.35)',
-              borderRadius: '4px',
-              padding: '1px 6px',
-              color: '#fde68a'
-            }}>
-              Risk: {riskFilter}
-            </span>
+            <button
+              onClick={() => onRiskFilterChange('all')}
+              style={{
+                background: 'rgba(245, 158, 11, 0.15)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                borderRadius: '4px',
+                padding: '2px 8px',
+                color: '#fde68a',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Click to remove Risk filter"
+            >
+              <span>Risk: {riskFilter}</span>
+              <span style={{ fontSize: '12px', opacity: 0.8 }}>×</span>
+            </button>
           )}
+
           {issueFilter !== 'all' && (
-            <span style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              borderRadius: '4px',
-              padding: '1px 6px',
-              color: '#fca5a5'
-            }}>
-              Issue: {issueFilter}
-            </span>
+            <button
+              onClick={() => onIssueFilterChange('all')}
+              style={{
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: '4px',
+                padding: '2px 8px',
+                color: '#fca5a5',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Click to remove Issue filter"
+            >
+              <span>Issue: {issueFilter}</span>
+              <span style={{ fontSize: '12px', opacity: 0.8 }}>×</span>
+            </button>
           )}
+
           {searchTerm && (
-            <span style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: '4px',
-              padding: '1px 6px',
-              color: '#f8fafc'
-            }}>
-              Query: "{searchTerm}"
-            </span>
+            <button
+              onClick={() => onSearchChange('')}
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '4px',
+                padding: '2px 8px',
+                color: '#f8fafc',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Click to clear search query"
+            >
+              <span>Query: "{searchTerm}"</span>
+              <span style={{ fontSize: '12px', opacity: 0.8 }}>×</span>
+            </button>
           )}
+
+          <button
+            onClick={onClearFilters}
+            style={{
+              padding: '2px 8px',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '4px',
+              color: '#94a3b8',
+              fontSize: '10.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              marginLeft: 'auto'
+            }}
+          >
+            Clear all
+          </button>
         </div>
       )}
 
       {/* ── Architecture Health Explainability Modal ── */}
-      {showHealthModal && healthData && (
+      {/* Rendered through a portal: the toolbar sits inside a backdrop-filter
+          container, which turns it into the containing block for fixed-position
+          descendants and would clip the modal behind the header. */}
+      {showHealthModal && healthData && createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
@@ -546,8 +666,10 @@ export function ArchitectureToolbar({
           padding: '20px'
         }}>
           <div style={{
-            maxWidth: '520px',
+            maxWidth: '540px',
             width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             background: 'rgba(15, 23, 42, 0.98)',
             border: '1px solid rgba(255, 255, 255, 0.12)',
             borderRadius: '16px',
@@ -561,7 +683,7 @@ export function ArchitectureToolbar({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '18px' }}>🩺</span>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#f8fafc', margin: 0 }}>
-                  Architecture Health Breakdown
+                  Architecture Health
                 </h3>
               </div>
               <button
@@ -578,7 +700,7 @@ export function ArchitectureToolbar({
               </button>
             </div>
 
-            {/* Overall Score */}
+            {/* Overall Score with Explainable Penalties */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -592,8 +714,8 @@ export function ArchitectureToolbar({
                 <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '2px' }}>
                   Architecture Health Score
                 </div>
-                <div style={{ fontSize: '13px', color: '#e2e8f0' }}>
-                  Calculated from real dependency metrics & graph structure
+                <div style={{ fontSize: '12px', color: '#cbd5e1' }}>
+                  Base: <strong>100</strong> · Penalties: <strong style={{ color: healthData.totalPenalty > 0 ? '#ef4444' : '#10b981' }}>-{healthData.totalPenalty || 0}</strong>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -606,10 +728,36 @@ export function ArchitectureToolbar({
               </div>
             </div>
 
-            {/* Contributing Signals Breakdown */}
+            {/* Summary bullets (Why the score exists) */}
+            {healthData.summary && healthData.summary.length > 0 && (
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '8px',
+                padding: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+                  Why this score exists:
+                </div>
+                {healthData.summary.map((line, idx) => (
+                  <div key={idx} style={{
+                    fontSize: '11.5px',
+                    color: line.startsWith('✓') ? '#86efac' : '#fde047',
+                    fontWeight: 500,
+                  }}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Contributing Signals Breakdown with Penalty Points */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#cbd5e1', textTransform: 'uppercase' }}>
-                Contributing Signals & Penalties
+                Contributing Signals Breakdown
               </div>
               {healthData.breakdown.map((item) => (
                 <div
@@ -627,9 +775,14 @@ export function ArchitectureToolbar({
                   <div>
                     <div style={{ fontSize: '12px', fontWeight: '600', color: '#f1f5f9' }}>
                       {item.label}: <span style={{ color: '#38bdf8', fontFamily: 'monospace' }}>{item.value}</span>
+                      {item.penalty > 0 && (
+                        <span style={{ fontSize: '10.5px', color: '#ef4444', fontWeight: 700, marginLeft: '6px' }}>
+                          (-{item.penalty} pts)
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>
-                      {item.detail}
+                      {item.explanation || item.detail}
                     </div>
                   </div>
                   <div>
@@ -666,7 +819,8 @@ export function ArchitectureToolbar({
               Close
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

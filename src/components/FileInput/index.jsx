@@ -77,18 +77,17 @@ export default function FileInput({
   // Load runs when project changes - use the ID string to avoid infinite loops
   const selectedProjectId = selectedProject?.id
   useEffect(() => {
-    if (selectedProjectId) {
+    // The demo project lives only in the client, so there is nothing to fetch
+    // from the backend (and the request would only log a 404 warning).
+    if (selectedProjectId && !demoMode) {
       loadRuns(selectedProjectId)
     }
-  }, [selectedProjectId, loadRuns])
+  }, [selectedProjectId, loadRuns, demoMode])
 
   // Effective runs: if demoMode or demoRuns provided, use demoRuns
   const effectiveRuns = (demoMode && demoRuns?.length) ? demoRuns : runs
   const effectiveRunId = (demoMode && demoRuns?.length) ? (selectedRunId || demoRuns[0]?.id) : selectedRunId
   const effectiveSelectedRun = effectiveRuns.find(r => r.id === effectiveRunId) || (demoMode ? demoRuns[0] : null)
-
-  // Find the currently selected run object
-  const selectedRun = effectiveSelectedRun
 
   // Wrap handleLoadRun to ensure tab context is preserved
   const handleSelectRunWithContext = useCallback((runOrId) => {

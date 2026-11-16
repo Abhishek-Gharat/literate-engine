@@ -3,6 +3,14 @@ import { COLORS } from '../../styles/constants'
 import { computeHealthScore, scoreToGrade, getHealthColor } from '../../utils/healthScore'
 import { prioritizeIssues } from '../../utils/issuePrioritizer'
 import { diffRuns } from '../../utils/runDiff'
+import './overview.css'
+
+const SEVERITY_STYLE = {
+  critical: { label: 'CRITICAL', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.14)', border: 'rgba(239, 68, 68, 0.35)' },
+  high: { label: 'HIGH', color: '#f97316', bg: 'rgba(249, 115, 22, 0.14)', border: 'rgba(249, 115, 22, 0.35)' },
+  medium: { label: 'MEDIUM', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.14)', border: 'rgba(245, 158, 11, 0.32)' },
+  low: { label: 'LOW', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.3)' },
+}
 
 /**
  * ProjectOverview - Stable Level-2 Project Home
@@ -13,100 +21,84 @@ import { diffRuns } from '../../utils/runDiff'
  * - Clear actions: Open Latest Architecture, Start New Analysis, View Runs
  * - Clean empty state when 0 runs exist
  */
-export default function ProjectOverview({
+function ProjectOverviewContent({
   project,
   runs = [],
   onOpenLatestArchitecture,
   onStartNewAnalysis,
   onViewRuns,
+  onViewIssues,
   onOpenRun,
   onTryDemo
 }) {
-  if (!project) {
-    return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        padding: '40px',
-        color: COLORS.text.secondary,
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📂</div>
-        <h2 style={{ fontSize: '20px', fontWeight: 600, color: COLORS.text.primary, marginBottom: '8px' }}>
-          No Project Selected
-        </h2>
-        <p style={{ maxWidth: '400px', fontSize: '14px', lineHeight: 1.6, color: COLORS.text.muted, marginBottom: '24px' }}>
-          Select an existing project from the dropdown in the header, or create a new project to get started.
-        </p>
-        {onTryDemo && (
-          <button
-            onClick={onTryDemo}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              background: COLORS.primary.DEFAULT,
-              color: '#ffffff',
-              border: 'none',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
-            ✦ Explore ShopApp Demo
-          </button>
-        )}
-      </div>
-    )
-  }
-
   const latestRun = runs.length > 0 ? runs[0] : null
   const runCount = runs.length
 
-  // Calculate health score if snapshot is present
+  // Calculate health score. The runs list endpoint does not ship the full
+  // snapshot, so fall back to the score the engine already stored in `stats`
+  // instead of showing a placeholder.
   const healthInfo = React.useMemo(() => {
     if (!latestRun) return null
-    try {
-      const nodes = latestRun.snapshot?.nodes || []
-      const cyclicEdges = latestRun.snapshot?.cyclicEdges || []
-      const unresolvedImports = latestRun.unresolvedImports?.length || 0
-      const res = computeHealthScore({ nodes, cyclicEdges, unresolvedImports })
-      if (!res || res.score === null) return null
-      return {
-        score: typeof res.score === 'number' ? res.score : 100,
-        grade: res.grade || scoreToGrade(res.score),
-        color: getHealthColor(res.score),
-        cyclesCount: cyclicEdges.length,
-        breakdown: res.breakdown || [],
+
+    const stats = latestRun.stats || {}
+      let score = typeof stats.healthScore === 'number' ? stats.healthScore : null
+      let grade = stats.healthGrade || null
+      let cyclesCount = typeof stats.cyclesFound === 'number' ? Math.round(stats.cyclesFound) : 0
+      let breakdown = []
+
+    const snapshot = latestRun.snapshot
+    if (snapshot?.nodes) {
+      try {
+        const nodes = snapshot.nodes || []
+        const cyclicEdges = snapshot.cyclicEdges || []
+        const unresolvedImports = latestRun.unresolvedImports?.length || 0
+        const res = computeHealthScore({ nodes, cyclicEdges, unresolvedImports })
+        if (res && typeof res.score === 'number') {
+          score = res.score
+          grade = res.grade || scoreToGrade(res.score)
+          const cyclesSignal = (res.breakdown || []).find((b) => b.id === 'cycles')
+          cyclesCount = Number(cyclesSignal?.value) || 0
+          breakdown = res.breakdown || []
+        }
+      } catch {
+        // Keep the stats-derived values
       }
-    } catch {
-      return null
+    }
+
+    if (score === null) return null
+
+    return {
+      score,
+      grade: grade || scoreToGrade(score),
+      color: getHealthColor(score),
+      cyclesCount,
+      breakdown,
     }
   }, [latestRun])
 
   // Calculate top prioritized issues
   const topIssues = React.useMemo(() => {
-    if (!latestRun) return { critical: 0, high: 0, medium: 0, total: 0 }
+    const empty = { critical: 0, high: 0, medium: 0, low: 0, total: 0, list: [] }
+    if (!latestRun) return empty
     try {
       const nodes = latestRun.snapshot?.nodes || []
       const edges = latestRun.snapshot?.edges || []
       const cyclicEdges = latestRun.snapshot?.cyclicEdges || []
-      const { counts } = prioritizeIssues({
+      const { counts, issues } = prioritizeIssues({
         nodes,
         edges,
         cyclicEdges,
         stats: latestRun.stats || {},
       })
-      return counts
+      const list = [...(issues || [])].sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0))
+      return { ...counts, list }
     } catch {
-      return { critical: 0, high: 0, medium: 0, total: 0 }
+      return empty
     }
   }, [latestRun])
 
   const formatDate = (isoString) => {
-    if (!isoString) return 'Unknown'
+    if (!isoString) return ''
     try {
       const d = new Date(isoString)
       return d.toLocaleDateString(undefined, {
@@ -149,26 +141,9 @@ export default function ProjectOverview({
   }, [runs])
 
   return (
-    <div style={{
-      width: '100%',
-      maxWidth: '1000px',
-      margin: '0 auto',
-      padding: '40px 24px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '32px'
-    }}>
+    <div className="rv-overview">
       {/* ── Project Header Card ── */}
-      <div style={{
-        background: COLORS.bg.card,
-        border: `1px solid ${COLORS.border.DEFAULT}`,
-        borderRadius: '16px',
-        padding: '28px 32px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
-      }}>
+      <div className="rv-card rv-rise" style={{ gap: '18px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
@@ -195,44 +170,12 @@ export default function ProjectOverview({
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button
-              onClick={onStartNewAnalysis}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 18px',
-                borderRadius: '8px',
-                background: COLORS.primary.DEFAULT,
-                color: '#ffffff',
-                border: 'none',
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
-                transition: 'all 0.15s ease'
-              }}
-            >
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button className="rv-btn rv-btn--primary" onClick={onStartNewAnalysis}>
               <span>⇪</span> Start New Analysis
             </button>
             {runCount > 0 && (
-              <button
-                onClick={onViewRuns}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '9px 16px',
-                  borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.06)',
-                  color: COLORS.text.primary,
-                  border: `1px solid ${COLORS.border.light}`,
-                  fontWeight: 500,
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
+              <button className="rv-btn rv-btn--ghost" onClick={onViewRuns}>
                 <span>🕘</span> Runs History ({runCount})
               </button>
             )}
@@ -252,12 +195,16 @@ export default function ProjectOverview({
           <div>
             <strong style={{ color: COLORS.text.secondary, fontWeight: 500 }}>Total Analyses:</strong> {runCount} {runCount === 1 ? 'run' : 'runs'}
           </div>
-          <div>
-            <strong style={{ color: COLORS.text.secondary, fontWeight: 500 }}>Created:</strong> {formatDate(project.created_at)}
-          </div>
-          <div>
-            <strong style={{ color: COLORS.text.secondary, fontWeight: 500 }}>Updated:</strong> {formatDate(project.updated_at)}
-          </div>
+          {formatDate(project.created_at) && (
+            <div>
+              <strong style={{ color: COLORS.text.secondary, fontWeight: 500 }}>Created:</strong> {formatDate(project.created_at)}
+            </div>
+          )}
+          {formatDate(project.updated_at) && (
+            <div>
+              <strong style={{ color: COLORS.text.secondary, fontWeight: 500 }}>Updated:</strong> {formatDate(project.updated_at)}
+            </div>
+          )}
           {project.id && !project._demo && (
             <div style={{ fontFamily: 'monospace', color: COLORS.text.dark }}>
               ID: {project.id.slice(0, 8)}...
@@ -268,16 +215,7 @@ export default function ProjectOverview({
 
       {/* ── State with Runs: Latest Analysis Snapshot Card ── */}
       {latestRun ? (
-        <div style={{
-          background: 'rgba(15,20,32,0.85)',
-          border: `1px solid ${COLORS.border.DEFAULT}`,
-          borderRadius: '16px',
-          padding: '28px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
-        }}>
+        <div className="rv-card rv-rise" style={{ background: 'rgba(15,20,32,0.85)', gap: '22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -294,178 +232,196 @@ export default function ProjectOverview({
                 }}>
                   Latest Snapshot
                 </span>
-                <span style={{ fontSize: '13px', color: COLORS.text.muted }}>
-                  {formatDate(latestRun.createdAt)}
-                </span>
+                {formatDate(latestRun.createdAt) && (
+                  <span style={{ fontSize: '13px', color: COLORS.text.muted }}>
+                    {formatDate(latestRun.createdAt)}
+                  </span>
+                )}
               </div>
               <h2 style={{ fontSize: '20px', fontWeight: 600, color: COLORS.text.primary, margin: 0 }}>
                 Analysis Run #{latestRun.id.slice(0, 8)}
               </h2>
             </div>
 
-            <button
-              onClick={() => onOpenLatestArchitecture(latestRun)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 24px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                color: '#ffffff',
-                border: 'none',
-                fontWeight: 600,
-                fontSize: '14px',
-                cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(99,102,241,0.4)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <span>❖</span> Open Architecture Workspace
-            </button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {onViewIssues && (
+                <button
+                  onClick={onViewIssues}
+                  className={`rv-btn ${
+                    topIssues.critical > 0
+                      ? 'rv-btn--danger'
+                      : topIssues.high > 0
+                        ? 'rv-btn--warn'
+                        : topIssues.total > 0
+                          ? 'rv-btn--warn'
+                          : 'rv-btn--ok'
+                  }`}
+                >
+                  <span>{topIssues.total > 0 ? '⚠️' : '✓'}</span> View Issues ({topIssues.total})
+                </button>
+              )}
+
+              <button
+                className="rv-btn rv-btn--primary"
+                style={{ padding: '12px 24px', fontSize: '14px' }}
+                onClick={() => onOpenLatestArchitecture(latestRun)}
+              >
+                <span>❖</span> Open Architecture Workspace
+              </button>
+            </div>
           </div>
 
           {/* Stats Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '16px'
-          }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: `1px solid ${COLORS.border.muted}`,
-              borderRadius: '12px',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{ fontSize: '12px', color: COLORS.text.muted, fontWeight: 500 }}>Files Analyzed</span>
-              <span style={{ fontSize: '24px', fontWeight: 700, color: COLORS.text.primary }}>
+          <div className="rv-stat-grid">
+            <div className="rv-stat">
+              <span className="rv-stat__label">Files Analyzed</span>
+              <span className="rv-stat__value">
                 {latestRun.stats?.totalFiles ?? latestRun.snapshot?.nodes?.length ?? 0}
               </span>
+              <span className="rv-stat__hint">source files parsed</span>
             </div>
 
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: `1px solid ${COLORS.border.muted}`,
-              borderRadius: '12px',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{ fontSize: '12px', color: COLORS.text.muted, fontWeight: 500 }}>Components</span>
-              <span style={{ fontSize: '24px', fontWeight: 700, color: '#10b981' }}>
+            <div className="rv-stat">
+              <span className="rv-stat__label">Components</span>
+              <span className="rv-stat__value" style={{ color: '#10b981' }}>
                 {latestRun.stats?.totalComponents ?? 0}
               </span>
-            </div>
-
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: `1px solid ${COLORS.border.muted}`,
-              borderRadius: '12px',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{ fontSize: '12px', color: COLORS.text.muted, fontWeight: 500 }}>Dependencies</span>
-              <span style={{ fontSize: '24px', fontWeight: 700, color: '#38bdf8' }}>
-                {latestRun.stats?.totalEdges ?? latestRun.snapshot?.edges?.length ?? 0}
+              <span className="rv-stat__hint">
+                {latestRun.stats?.totalHooks ?? 0} hooks · {latestRun.stats?.totalPages ?? 0} pages
               </span>
             </div>
 
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: `1px solid ${COLORS.border.muted}`,
-              borderRadius: '12px',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{ fontSize: '12px', color: COLORS.text.muted, fontWeight: 500 }}>Architecture Health</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {healthInfo ? (
-                  <>
-                    <span style={{
-                      fontSize: '20px',
-                      fontWeight: 800,
-                      color: healthInfo.color
-                    }}>
+            <div className="rv-stat">
+              <span className="rv-stat__label">Dependencies</span>
+              <span className="rv-stat__value" style={{ color: '#38bdf8' }}>
+                {latestRun.stats?.totalEdges ?? latestRun.snapshot?.edges?.length ?? 0}
+              </span>
+              <span className="rv-stat__hint">
+                {latestRun.stats?.cyclesFound ?? 0} circular · {latestRun.stats?.unresolvedImports ?? 0} unresolved
+              </span>
+            </div>
+
+            <div className="rv-stat" style={{ borderColor: healthInfo ? `${healthInfo.color}33` : undefined }}>
+              <span className="rv-stat__label">Architecture Health</span>
+              {healthInfo ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '7px' }}>
+                    <span className="rv-stat__value" style={{ color: healthInfo.color }}>
                       {healthInfo.grade}
                     </span>
-                    <span style={{ fontSize: '13px', color: COLORS.text.secondary }}>
-                      ({healthInfo.score}/100)
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: COLORS.text.secondary }}>
+                      {healthInfo.score}/100
                     </span>
-                    {healthInfo.cyclesCount === 0 ? (
-                      <span style={{ fontSize: '11px', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
-                        Clean DAG
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: '11px', color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
-                        {healthInfo.cyclesCount} cycles
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span style={{ fontSize: '14px', color: COLORS.text.secondary }}>Ready</span>
+                  </div>
+                  <div className="rv-meter">
+                    <div
+                      className="rv-meter__fill"
+                      style={{ width: `${healthInfo.score}%`, background: healthInfo.color }}
+                    />
+                  </div>
+                  <span className="rv-stat__hint">
+                    {healthInfo.cyclesCount === 0
+                      ? 'Clean DAG — no import cycles'
+                      : `${healthInfo.cyclesCount} import cycle${healthInfo.cyclesCount === 1 ? '' : 's'} detected`}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="rv-stat__value" style={{ fontSize: '18px', color: COLORS.text.secondary }}>
+                    Ready
+                  </span>
+                  <span className="rv-stat__hint">no snapshot loaded yet</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* ── Top Issues (actionable) ── */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: `1px solid ${COLORS.border.muted}`,
+            borderRadius: '12px',
+            padding: '16px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.text.secondary, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Top Issues
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {topIssues.critical > 0 && (
+                  <span className="rv-chip" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.14)', borderColor: 'rgba(239, 68, 68, 0.35)' }}>
+                    {topIssues.critical} Critical
+                  </span>
                 )}
+                {topIssues.high > 0 && (
+                  <span className="rv-chip" style={{ color: '#f97316', background: 'rgba(249, 115, 22, 0.14)', borderColor: 'rgba(249, 115, 22, 0.35)' }}>
+                    {topIssues.high} High
+                  </span>
+                )}
+                {topIssues.medium > 0 && (
+                  <span className="rv-chip" style={{ color: '#f59e0b', background: 'rgba(245, 158, 11, 0.14)', borderColor: 'rgba(245, 158, 11, 0.32)' }}>
+                    {topIssues.medium} Medium
+                  </span>
+                )}
+                {topIssues.low > 0 && (
+                  <span className="rv-chip" style={{ color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)', borderColor: 'rgba(56, 189, 248, 0.3)' }}>
+                    {topIssues.low} Low
+                  </span>
+                )}
+                <span style={{ fontSize: '12px', color: COLORS.text.muted }}>{topIssues.total} total</span>
               </div>
             </div>
 
-            {/* Top Issues Card */}
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: `1px solid ${COLORS.border.muted}`,
-              borderRadius: '12px',
-              padding: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}>
-              <span style={{ fontSize: '12px', color: COLORS.text.muted, fontWeight: 500 }}>Top Issues</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                {topIssues.total === 0 ? (
-                  <span style={{ fontSize: '13px', color: '#10b981', fontWeight: 600 }}>
-                    ✓ 0 Issues Found
-                  </span>
-                ) : (
-                  <>
-                    {topIssues.critical > 0 && (
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: '#ef4444',
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        border: '1px solid rgba(239, 68, 68, 0.35)',
-                        padding: '2px 6px',
-                        borderRadius: '4px'
-                      }}>
-                        {topIssues.critical} Critical
+            {topIssues.list.length === 0 ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                background: 'rgba(16, 185, 129, 0.08)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                fontSize: '13px',
+                color: '#6ee7b7'
+              }}>
+                <span style={{ fontSize: '15px' }}>✓</span>
+                No issues found — the architecture is clean.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {topIssues.list.slice(0, 4).map((issue) => {
+                  const sev = SEVERITY_STYLE[issue.severity] || SEVERITY_STYLE.low
+                  return (
+                    <button
+                      key={issue.id}
+                      className="rv-issue"
+                      onClick={onViewIssues}
+                      title={issue.reason || issue.title}
+                    >
+                      <span className="rv-chip" style={{ color: sev.color, background: sev.bg, borderColor: sev.border }}>
+                        {sev.label}
                       </span>
-                    )}
-                    {topIssues.high > 0 && (
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: '#f97316',
-                        background: 'rgba(249, 115, 22, 0.15)',
-                        border: '1px solid rgba(249, 115, 22, 0.35)',
-                        padding: '2px 6px',
-                        borderRadius: '4px'
-                      }}>
-                        {topIssues.high} High
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span className="rv-issue__title" style={{ display: 'block' }}>{issue.title}</span>
+                        <span className="rv-issue__meta">
+                          {issue.category}
+                          {issue.affectedCount ? ` · ${issue.affectedCount} module${issue.affectedCount === 1 ? '' : 's'} affected` : ''}
+                        </span>
                       </span>
-                    )}
-                    <span style={{ fontSize: '12px', color: COLORS.text.muted }}>
-                      ({topIssues.total} total)
-                    </span>
-                  </>
+                      <span style={{ color: COLORS.text.dark, fontSize: '14px', flexShrink: 0 }}>→</span>
+                    </button>
+                  )
+                })}
+                {topIssues.list.length > 4 && (
+                  <button className="rv-link" style={{ alignSelf: 'flex-start' }} onClick={onViewIssues}>
+                    View all {topIssues.total} issues →
+                  </button>
                 )}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Explainable Health Score Signals Breakdown */}
@@ -477,51 +433,65 @@ export default function ProjectOverview({
               padding: '16px 20px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px'
+              gap: '14px'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.text.secondary, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                  Architecture Health Breakdown (Explainable Signals)
+                  Health Breakdown
                 </span>
-                <span style={{ fontSize: '11px', color: COLORS.text.muted }}>
-                  Base: 100 · Penalties deducted deterministically
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '11px', color: COLORS.text.muted }}>
+                    Base 100 · penalties deducted deterministically
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: healthInfo.color, fontVariantNumeric: 'tabular-nums' }}>
+                    {healthInfo.score}/100
+                  </span>
+                </div>
               </div>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '8px'
-              }}>
-                {healthInfo.breakdown.map((item) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      padding: '8px 12px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '2px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11.5px', fontWeight: 600, color: COLORS.text.primary }}>
-                        {item.label}
-                      </span>
-                      <span style={{
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        color: item.status === 'good' ? '#10b981' : item.status === 'warn' ? '#f59e0b' : '#ef4444'
-                      }}>
-                        {item.status.toUpperCase()}
-                      </span>
+
+              <div className="rv-breakdown">
+                {healthInfo.breakdown.map((item) => {
+                  const penalty = Math.max(0, Number(item.penalty) || 0)
+                  const maxPenalty = Math.max(
+                    1,
+                    ...healthInfo.breakdown.map((b) => Math.max(0, Number(b.penalty) || 0))
+                  )
+                  const statusColor = item.status === 'good' ? '#10b981' : item.status === 'warn' ? '#f59e0b' : '#ef4444'
+                  return (
+                    <div key={item.id} className="rv-signal">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.text.primary }}>
+                          {item.label}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                          {penalty > 0 && (
+                            <span style={{ fontSize: '10.5px', fontWeight: 700, color: statusColor }}>
+                              −{penalty} pts
+                            </span>
+                          )}
+                          <span className="rv-chip" style={{ color: statusColor, background: `${statusColor}1f`, borderColor: `${statusColor}44` }}>
+                            {item.status.toUpperCase()}
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="rv-meter">
+                        <div
+                          className="rv-meter__fill"
+                          style={{
+                            width: penalty > 0 ? `${Math.round((penalty / maxPenalty) * 100)}%` : '0%',
+                            background: penalty > 0 ? statusColor : 'rgba(16,185,129,0.35)'
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ fontSize: '11.5px', color: COLORS.text.muted, lineHeight: 1.45 }}>
+                        <strong style={{ color: COLORS.text.secondary, fontWeight: 600 }}>{item.value}</strong>
+                        {' · '}{item.detail}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: COLORS.text.muted }}>
-                      Value: <strong style={{ color: COLORS.text.secondary }}>{item.value}</strong> · {item.detail}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -562,19 +532,13 @@ export default function ProjectOverview({
                         )
                       })}
                     </svg>
-                    <button
-                      onClick={onViewRuns}
-                      style={{ background: 'none', border: 'none', color: COLORS.primary.DEFAULT, fontSize: '12px', fontWeight: 500, cursor: 'pointer', padding: 0 }}
-                    >
+                    <button className="rv-link" onClick={onViewRuns}>
                       All runs →
                     </button>
                   </div>
                 )}
                 {healthSparkline.length <= 1 && (
-                  <button
-                    onClick={onViewRuns}
-                    style={{ background: 'none', border: 'none', color: COLORS.primary.DEFAULT, fontSize: '12px', fontWeight: 500, cursor: 'pointer', padding: 0 }}
-                  >
+                  <button className="rv-link" onClick={onViewRuns}>
                     View full history →
                   </button>
                 )}
@@ -590,21 +554,7 @@ export default function ProjectOverview({
                   })()
                   const diff = runDiffs[r.id]
                   return (
-                    <div
-                      key={r.id || idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '10px 14px',
-                        background: 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${COLORS.border.muted}`,
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        gap: '10px',
-                        flexWrap: 'wrap'
-                      }}
-                    >
+                    <div key={r.id || idx} className="rv-run">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                         <span style={{ color: COLORS.text.muted, fontFamily: 'monospace', fontSize: '11px', flexShrink: 0 }}>
                           #{r.id.slice(0, 8)}
@@ -613,15 +563,10 @@ export default function ProjectOverview({
                           {formatDate(r.createdAt)}
                         </span>
                         {runHealth !== null && (
-                          <span style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
+                          <span className="rv-chip" style={{
                             color: getHealthColor(runHealth),
                             background: `${getHealthColor(runHealth)}18`,
-                            border: `1px solid ${getHealthColor(runHealth)}44`,
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            flexShrink: 0
+                            borderColor: `${getHealthColor(runHealth)}44`
                           }}>
                             {runHealth}/100
                           </span>
@@ -647,17 +592,9 @@ export default function ProjectOverview({
                       </div>
 
                       <button
+                        className="rv-btn rv-btn--ghost"
+                        style={{ padding: '5px 12px', fontSize: '12px', flexShrink: 0 }}
                         onClick={() => onOpenRun(r)}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          background: 'rgba(255,255,255,0.06)',
-                          border: `1px solid ${COLORS.border.DEFAULT}`,
-                          color: COLORS.text.primary,
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          flexShrink: 0
-                        }}
                       >
                         Open →
                       </button>
@@ -695,42 +632,19 @@ export default function ProjectOverview({
             Analyze your project's React code to generate its first interactive dependency DAG, component tree, and architectural health metrics.
           </p>
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
+              className="rv-btn rv-btn--primary"
+              style={{ padding: '12px 24px', fontSize: '14px' }}
               onClick={onStartNewAnalysis}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                background: COLORS.primary.DEFAULT,
-                color: '#ffffff',
-                border: 'none',
-                fontWeight: 600,
-                fontSize: '14px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(99,102,241,0.35)'
-              }}
             >
               <span>⇪</span> Start New Analysis
             </button>
             {onTryDemo && (
               <button
+                className="rv-btn rv-btn--ghost"
+                style={{ padding: '12px 20px', fontSize: '14px' }}
                 onClick={onTryDemo}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 20px',
-                  borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.05)',
-                  color: COLORS.text.secondary,
-                  border: `1px solid ${COLORS.border.DEFAULT}`,
-                  fontWeight: 500,
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
               >
                 <span>✦</span> Explore Demo Sandbox
               </button>
@@ -740,4 +654,47 @@ export default function ProjectOverview({
       )}
     </div>
   )
+}
+
+/**
+ * Wrapper — keeps the "no project" early return out of the component that
+ * calls hooks. Returning early before `useMemo` would change the hook order
+ * between renders and crash React when a project is selected or cleared.
+ */
+export default function ProjectOverview(props) {
+  const { project, onTryDemo } = props
+
+  if (!project) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        padding: '40px',
+        color: COLORS.text.secondary,
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>📂</div>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, color: COLORS.text.primary, marginBottom: '8px' }}>
+          No Project Selected
+        </h2>
+        <p style={{ maxWidth: '400px', fontSize: '14px', lineHeight: 1.6, color: COLORS.text.muted, marginBottom: '24px' }}>
+          Select an existing project from the dropdown in the header, or create a new project to get started.
+        </p>
+        {onTryDemo && (
+          <button
+            className="rv-btn rv-btn--primary"
+            style={{ padding: '10px 20px', fontSize: '14px' }}
+            onClick={onTryDemo}
+          >
+            ✦ Explore ShopApp Demo
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  return <ProjectOverviewContent {...props} />
 }

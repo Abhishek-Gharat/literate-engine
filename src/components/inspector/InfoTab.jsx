@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 /**
  * InfoTab - Comprehensive Node Architecture Inspector
@@ -13,6 +13,8 @@ export default function InfoTab({
   onSelectNodeByPath,
   issues = [],
 }) {
+  const [activeSubView, setActiveSubView] = useState('trace') // 'trace' | 'deps' | 'callers' | 'impact'
+
   if (!node) {
     return (
       <div style={{
@@ -90,23 +92,23 @@ export default function InfoTab({
   const risk = getRiskInfo()
 
   // Filter issues for this node
-  const nodeIssues = issues.filter(i => 
-    i.nodeId === node.id || 
-    i.secondaryNodeId === node.id || 
-    (Array.isArray(i.affectedNodes) && i.affectedNodes.includes(node.id))
+  const nodeIssues = issues.filter(i =>
+    (i.nodeId && i.nodeId === node.id) ||
+    (i.secondaryNodeId && i.secondaryNodeId === node.id) ||
+    (Array.isArray(i.affectedNodes) && node.id && i.affectedNodes.includes(node.id))
   )
 
   const contextualPrompts = [
     `Why is ${node.label} considered ${risk.level.toLowerCase()} risk?`,
-    `What modules will break if ${node.label} changes?`,
-    `How can I decouple ${node.label} to reduce its blast radius?`,
+    `What depends on this module (${usedByCount} callers, ${totalImpact} affected)?`,
+    `How can I reduce coupling for ${node.label}?`,
     `Suggest a refactoring approach for ${node.label}.`,
-    `Explain the architectural purpose of ${node.label}.`,
+    `Explain the architectural purpose and responsibility of ${node.label}.`,
   ]
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      {/* Node Identity Card */}
+      {/* ── Node Identity & Role Card ── */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.03)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -162,103 +164,290 @@ export default function InfoTab({
         </div>
 
         <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
-          <strong>Role:</strong> {getArchitectureRole()}
+          <span style={{ color: '#64748b' }}>Role:</span> <strong style={{ color: '#e2e8f0' }}>{getArchitectureRole()}</strong>
+        </div>
+
+        {node.id !== node.label && (
+          <div style={{ fontSize: '10px', color: '#64748b', fontFamily: 'monospace', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {node.id}
+          </div>
+        )}
+
+        {/* Quick architecture metrics row */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '6px',
+          marginTop: '12px',
+          paddingTop: '10px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+          textAlign: 'center'
+        }}>
+          <div>
+            <div style={{ fontSize: '9.5px', color: '#64748b', textTransform: 'uppercase' }}>Imports</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#818cf8' }}>{importCount}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '9.5px', color: '#64748b', textTransform: 'uppercase' }}>Callers</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#10b981' }}>{usedByCount}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '9.5px', color: '#64748b', textTransform: 'uppercase' }}>Impact</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: totalImpact > 0 ? '#f59e0b' : '#94a3b8' }}>{totalImpact}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '9.5px', color: '#64748b', textTransform: 'uppercase' }}>Issues</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: nodeIssues.length > 0 ? '#ef4444' : '#10b981' }}>{nodeIssues.length}</div>
+          </div>
         </div>
       </div>
 
-      {/* Change Impact (Blast Radius) */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '10px',
-        padding: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '13px' }}>💥</span>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-              Change Impact Analysis
-            </span>
-          </div>
-          <span style={{
-            fontSize: '12px',
-            fontWeight: '700',
-            fontFamily: 'monospace',
-            color: totalImpact > 0 ? '#f59e0b' : '#10b981'
-          }}>
-            {totalImpact} affected
-          </span>
-        </div>
+      {/* ── Quick Actions Row ── */}
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <button
+          onClick={() => setActiveSubView('trace')}
+          style={{
+            flex: 1,
+            padding: '7px 8px',
+            background: activeSubView === 'trace' ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+            border: `1px solid ${activeSubView === 'trace' ? 'rgba(99, 102, 241, 0.5)' : 'rgba(255, 255, 255, 0.08)'}`,
+            borderRadius: '6px',
+            color: activeSubView === 'trace' ? '#c7d2fe' : '#cbd5e1',
+            fontSize: '11px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px'
+          }}
+        >
+          <span>🔗</span> Trace
+        </button>
 
-        <div style={{ fontSize: '11.5px', color: '#94a3b8', lineHeight: '1.4', marginBottom: '10px' }}>
-          {totalImpact === 0
-            ? 'Leaf module: nothing in the analyzed codebase imports this file.'
-            : `${impact?.directCount || usedByCount} direct · ${impact?.indirectCount || 0} indirect dependents (up to ${impact?.maxDepth || 1} level${(impact?.maxDepth || 1) === 1 ? '' : 's'} deep).`}
-        </div>
-
-        {onToggleImpact && totalImpact > 0 && (
+        {onToggleImpact && (
           <button
             onClick={onToggleImpact}
             style={{
-              width: '100%',
-              padding: '7px 10px',
-              background: showImpact ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-              border: `1px solid ${showImpact ? 'rgba(245, 158, 11, 0.6)' : 'rgba(255, 255, 255, 0.12)'}`,
-              borderRadius: '7px',
-              color: showImpact ? '#fde047' : '#f1f5f9',
-              fontSize: '11.5px',
+              flex: 1,
+              padding: '7px 8px',
+              background: showImpact ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+              border: `1px solid ${showImpact ? 'rgba(245, 158, 11, 0.5)' : 'rgba(255, 255, 255, 0.08)'}`,
+              borderRadius: '6px',
+              color: showImpact ? '#fde047' : '#cbd5e1',
+              fontSize: '11px',
               fontWeight: '600',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease'
+              gap: '4px'
             }}
           >
-            <span>{showImpact ? '✦' : '◉'}</span>
-            <span>{showImpact ? 'Impact Highlight Active (Click to Hide)' : 'View Impact Graph'}</span>
+            <span>💥</span> Impact {showImpact ? '(On)' : ''}
+          </button>
+        )}
+
+        {onSwitchToChat && (
+          <button
+            onClick={() => onSwitchToChat(`Explain the role and architecture impact of ${node.label}`)}
+            style={{
+              flex: 1,
+              padding: '7px 8px',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))',
+              border: '1px solid rgba(129, 140, 248, 0.3)',
+              borderRadius: '6px',
+              color: '#e0e7ff',
+              fontSize: '11px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px'
+            }}
+          >
+            <span>✦</span> Ask AI
           </button>
         )}
       </div>
 
-      {/* Dependency Trace: Imports vs Dependents */}
+      {/* ── Sub-view Tab Selector (Dependencies vs Dependents vs Impact vs Trace) ── */}
       <div style={{
+        display: 'flex',
+        gap: '2px',
         background: 'rgba(255, 255, 255, 0.03)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '10px',
-        padding: '12px'
+        padding: '3px',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.06)'
       }}>
-        <div style={{
-          fontSize: '11px',
-          fontWeight: '700',
-          color: '#f8fafc',
-          textTransform: 'uppercase',
-          letterSpacing: '0.6px',
-          marginBottom: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}>
-          <span>🔗</span> Dependency Trace
-        </div>
+        {[
+          { id: 'trace', label: 'Trace' },
+          { id: 'deps', label: `Imports (${importCount})` },
+          { id: 'callers', label: `Dependents (${usedByCount})` },
+          { id: 'impact', label: `Impact (${totalImpact})` },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveSubView(tab.id)}
+            style={{
+              flex: 1,
+              padding: '4px 6px',
+              background: activeSubView === tab.id ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              border: 'none',
+              borderRadius: '6px',
+              color: activeSubView === tab.id ? '#ffffff' : '#64748b',
+              fontSize: '10px',
+              fontWeight: activeSubView === tab.id ? '700' : '500',
+              cursor: 'pointer',
+              textAlign: 'center'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Outgoing: Imports */}
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>
-            <span><strong>Imports</strong> (Outgoing)</span>
-            <span>{importCount}</span>
+      {/* ── Sub-view Content Area ── */}
+      {activeSubView === 'trace' && (
+        /* Visual Dependency Flow Trace */
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px'
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', textTransform: 'uppercase' }}>
+            🔗 Dependency Connection Flow
+          </div>
+
+          {/* Upstream Callers */}
+          <div>
+            <div style={{ fontSize: '10px', color: '#10b981', fontWeight: 700, marginBottom: '4px' }}>
+              ↑ DEPENDENTS (Who imports {node.label})
+            </div>
+            {usedByCount === 0 ? (
+              <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', padding: '2px 0' }}>
+                No incoming callers (Root component or entry page)
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {node.importedBy.slice(0, 4).map((caller, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => onSelectNodeByPath?.(caller)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '4px 8px',
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                      borderRadius: '5px',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                      color: '#a7f3d0',
+                      cursor: onSelectNodeByPath ? 'pointer' : 'default',
+                    }}
+                  >
+                    <span>{caller}</span>
+                    <span style={{ fontSize: '10px', color: '#10b981' }}>↓ calls</span>
+                  </div>
+                ))}
+                {usedByCount > 4 && (
+                  <div style={{ fontSize: '10px', color: '#64748b', textAlign: 'center' }}>
+                    +{usedByCount - 4} more dependents
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Active Node Anchor */}
+          <div style={{
+            padding: '6px 10px',
+            background: 'rgba(99, 102, 241, 0.15)',
+            border: '1px solid rgba(99, 102, 241, 0.4)',
+            borderRadius: '6px',
+            textAlign: 'center',
+            fontSize: '11.5px',
+            fontWeight: 700,
+            color: '#c7d2fe',
+            fontFamily: 'monospace'
+          }}>
+            ❖ {node.label} (Current Focus)
+          </div>
+
+          {/* Downstream Dependencies */}
+          <div>
+            <div style={{ fontSize: '10px', color: '#818cf8', fontWeight: 700, marginBottom: '4px' }}>
+              ↓ DEPENDENCIES (Who {node.label} imports)
+            </div>
+            {importCount === 0 ? (
+              <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', padding: '2px 0' }}>
+                No outgoing imports (Leaf utility or presentation node)
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {node.imports.slice(0, 4).map((imp, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => onSelectNodeByPath?.(imp)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '4px 8px',
+                      background: 'rgba(99, 102, 241, 0.08)',
+                      border: '1px solid rgba(99, 102, 241, 0.2)',
+                      borderRadius: '5px',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                      color: '#c7d2fe',
+                      cursor: onSelectNodeByPath ? 'pointer' : 'default',
+                    }}
+                  >
+                    <span>{imp}</span>
+                    <span style={{ fontSize: '10px', color: '#818cf8' }}>→ uses</span>
+                  </div>
+                ))}
+                {importCount > 4 && (
+                  <div style={{ fontSize: '10px', color: '#64748b', textAlign: 'center' }}>
+                    +{importCount - 4} more dependencies
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeSubView === 'deps' && (
+        /* Outgoing Imports List */
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          padding: '12px'
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
+            Imports ({importCount}) — Modules this file depends on
           </div>
           {importCount === 0 ? (
-            <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', padding: '4px 0' }}>None (Root / Leaf)</div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+              No outgoing dependencies.
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '120px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '180px', overflowY: 'auto' }}>
               {node.imports.map((imp, idx) => (
                 <div
                   key={idx}
                   onClick={() => onSelectNodeByPath?.(imp)}
                   style={{
-                    padding: '4px 8px',
+                    padding: '5px 8px',
                     background: 'rgba(255, 255, 255, 0.04)',
                     borderLeft: '2px solid #818cf8',
                     borderRadius: '4px',
@@ -279,23 +468,31 @@ export default function InfoTab({
             </div>
           )}
         </div>
+      )}
 
-        {/* Incoming: Dependents (Used By) */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>
-            <span><strong>Used By</strong> (Dependents)</span>
-            <span>{usedByCount}</span>
+      {activeSubView === 'callers' && (
+        /* Incoming Callers List */
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          padding: '12px'
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', marginBottom: '8px' }}>
+            Dependents ({usedByCount}) — Modules that depend on this file
           </div>
           {usedByCount === 0 ? (
-            <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', padding: '4px 0' }}>None (Orphan / Top-level Page)</div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+              No incoming callers.
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '120px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '180px', overflowY: 'auto' }}>
               {node.importedBy.map((caller, idx) => (
                 <div
                   key={idx}
                   onClick={() => onSelectNodeByPath?.(caller)}
                   style={{
-                    padding: '4px 8px',
+                    padding: '5px 8px',
                     background: 'rgba(255, 255, 255, 0.04)',
                     borderLeft: '2px solid #10b981',
                     borderRadius: '4px',
@@ -316,9 +513,64 @@ export default function InfoTab({
             </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Relevant Issues */}
+      {activeSubView === 'impact' && (
+        /* Change Impact (Blast Radius Breakdown) */
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', textTransform: 'uppercase' }}>
+              Transitive Blast Radius
+            </span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: totalImpact > 0 ? '#f59e0b' : '#10b981', fontFamily: 'monospace' }}>
+              {totalImpact} affected modules
+            </span>
+          </div>
+
+          <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: '1.4' }}>
+            {totalImpact === 0
+              ? 'Isolated leaf module: no files depend on this module.'
+              : `${impact?.directCount || usedByCount} direct · ${impact?.indirectCount || 0} indirect dependents (maximum traversal depth: ${impact?.maxDepth || 1}).`}
+          </div>
+
+          {impact?.ordered && impact.ordered.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '140px', overflowY: 'auto' }}>
+              {impact.ordered.slice(0, 8).map(entry => (
+                <div
+                  key={entry.id}
+                  onClick={() => onSelectNodeByPath?.(entry.id)}
+                  style={{
+                    padding: '4px 8px',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    borderLeft: `2px solid ${entry.depth === 1 ? '#f59e0b' : 'rgba(245, 158, 11, 0.4)'}`,
+                    borderRadius: '4px',
+                    fontSize: '10.5px',
+                    fontFamily: 'monospace',
+                    color: '#fef3c7',
+                    cursor: onSelectNodeByPath ? 'pointer' : 'default',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.label || entry.id}</span>
+                  <span style={{ fontSize: '9.5px', opacity: 0.7 }}>depth {entry.depth}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Relevant Issues for This Node ── */}
       {nodeIssues.length > 0 && (
         <div style={{
           background: 'rgba(239, 68, 68, 0.06)',
@@ -339,7 +591,7 @@ export default function InfoTab({
         </div>
       )}
 
-      {/* Contextual AI Actions */}
+      {/* ── Contextual AI Actions ── */}
       <div style={{
         background: 'rgba(99, 102, 241, 0.06)',
         border: '1px solid rgba(99, 102, 241, 0.2)',
@@ -357,7 +609,7 @@ export default function InfoTab({
           alignItems: 'center',
           gap: '6px'
         }}>
-          <span>✦</span> Contextual AI Actions
+          <span>✦</span> Contextual AI Prompts
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
           {contextualPrompts.map((prompt, i) => (

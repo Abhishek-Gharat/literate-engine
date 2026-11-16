@@ -2,11 +2,12 @@ import { Handle, Position } from '@xyflow/react'
 
 const TYPE_CONFIG = {
   root:      { icon: '⚡', color: '#818cf8', label: 'Root', bg: 'rgba(129, 140, 248, 0.12)' },
-  entry:     { icon: '🚪', color: '#38bdf8', label: 'Entry Point', bg: 'rgba(56, 189, 248, 0.12)' },
+  entry:     { icon: '🚪', color: '#22d3ee', label: 'Entry Point', bg: 'rgba(34, 211, 238, 0.12)' },
   page:      { icon: '📄', color: '#38bdf8', label: 'Page', bg: 'rgba(56, 189, 248, 0.12)' },
   component: { icon: '🧩', color: '#10b981', label: 'Component', bg: 'rgba(16, 185, 129, 0.12)' },
   hook:      { icon: '🪝', color: '#f43f5e', label: 'Hook', bg: 'rgba(244, 63, 94, 0.12)' },
-  index:     { icon: '📦', color: '#a855f7', label: 'Index', bg: 'rgba(168, 85, 247, 0.12)' },
+  context:   { icon: '🧭', color: '#a855f7', label: 'Context', bg: 'rgba(168, 85, 247, 0.12)' },
+  index:     { icon: '🧭', color: '#a855f7', label: 'Context', bg: 'rgba(168, 85, 247, 0.12)' },
   ghost:     { icon: '👻', color: '#94a3b8', label: 'External', bg: 'rgba(148, 163, 184, 0.12)' },
 }
 
@@ -31,6 +32,24 @@ export default function ComponentNode({ data, selected }) {
   const accent = heat || risk
   const consumers = data.signals?.contextConsumers?.length || 0
 
+  const isFocused = Boolean(data.focused)
+  const isImpacted = Boolean(data.impactHighlighted)
+
+  // Borders are written as explicit longhands: mixing the `border` shorthand
+  // with `borderTop`/`borderLeft` makes React warn about conflicting style
+  // properties and lets one declaration silently win over the other.
+  const sideBorderColor = selected ? config.color : 'rgba(255, 255, 255, 0.10)'
+  const topBorderColor = accent ? accent.color : config.color
+  const leftBorderColor = accent ? accent.color : sideBorderColor
+
+  const restingShadow = isFocused
+    ? '0 0 0 3px rgba(99, 102, 241, 0.9), 0 0 28px rgba(99, 102, 241, 0.45), 0 12px 36px -4px rgba(0, 0, 0, 0.6)'
+    : isImpacted
+      ? '0 0 0 3px rgba(245, 166, 35, 0.75), 0 0 24px rgba(245, 166, 35, 0.35), 0 4px 20px -2px rgba(0, 0, 0, 0.5)'
+      : selected
+        ? `0 0 0 2px ${config.color}55, 0 12px 36px -4px ${config.color}40, 0 0 20px ${config.color}20`
+        : '0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04)'
+
   return (
     <div
       title={
@@ -46,34 +65,50 @@ export default function ComponentNode({ data, selected }) {
           : selected
             ? `linear-gradient(135deg, ${config.color}15 0%, rgba(16, 21, 35, 0.95) 100%)`
             : 'rgba(13, 17, 28, 0.88)',
-        border: `1px solid ${selected ? config.color : 'rgba(255, 255, 255, 0.10)'}`,
-        borderTop: `2.5px solid ${accent ? accent.color : config.color}`,
-        borderLeft: accent ? `3px solid ${accent.color}` : undefined,
+        borderTopStyle: 'solid',
+        borderTopWidth: '2.5px',
+        borderTopColor: topBorderColor,
+        borderRightStyle: 'solid',
+        borderRightWidth: '1px',
+        borderRightColor: sideBorderColor,
+        borderBottomStyle: 'solid',
+        borderBottomWidth: '1px',
+        borderBottomColor: sideBorderColor,
+        borderLeftStyle: 'solid',
+        borderLeftWidth: accent ? '3px' : '1px',
+        borderLeftColor: leftBorderColor,
         borderRadius: '12px',
         minWidth: '185px',
         maxWidth: '220px',
         fontFamily: "'Inter', system-ui, sans-serif",
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        boxShadow: selected
-          ? `0 0 0 2px ${config.color}55, 0 12px 36px -4px ${config.color}40, 0 0 20px ${config.color}20`
-          : '0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04)',
+        boxShadow: restingShadow,
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
         cursor: 'pointer',
       }}
       onMouseEnter={(e) => {
         if (!selected) {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)'
+          // Only brighten the neutral edges — the accent edges carry meaning.
+          e.currentTarget.style.borderRightColor = 'rgba(255, 255, 255, 0.25)'
+          e.currentTarget.style.borderBottomColor = 'rgba(255, 255, 255, 0.25)'
+          if (!accent) e.currentTarget.style.borderLeftColor = 'rgba(255, 255, 255, 0.25)'
           e.currentTarget.style.transform = 'translateY(-2px)'
-          e.currentTarget.style.boxShadow = `0 10px 28px -4px rgba(0,0,0,0.6), 0 0 18px ${config.color}25`
+          if (!isFocused && !isImpacted) {
+            e.currentTarget.style.boxShadow = `0 10px 28px -4px rgba(0,0,0,0.6), 0 0 18px ${config.color}25`
+          }
         }
       }}
       onMouseLeave={(e) => {
         if (!selected) {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.10)'
+          e.currentTarget.style.borderRightColor = sideBorderColor
+          e.currentTarget.style.borderBottomColor = sideBorderColor
+          if (!accent) e.currentTarget.style.borderLeftColor = sideBorderColor
           e.currentTarget.style.transform = 'translateY(0)'
-          e.currentTarget.style.boxShadow = '0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04)'
+          if (!isFocused && !isImpacted) {
+            e.currentTarget.style.boxShadow = restingShadow
+          }
         }
       }}
     >
@@ -116,6 +151,7 @@ export default function ComponentNode({ data, selected }) {
           {config.icon}
         </span>
         <span
+          data-node-type={config.label}
           style={{
             fontSize: '10px',
             color: config.color,
@@ -182,6 +218,7 @@ export default function ComponentNode({ data, selected }) {
 
       {/* Filename */}
       <div
+        data-node-label={data.label}
         style={{
           padding: '9px 12px 7px',
           color: '#f8fafc',
@@ -198,6 +235,7 @@ export default function ComponentNode({ data, selected }) {
 
       {/* Stats pill footer */}
       <div
+        data-node-stats={`↓ ${importCount}   ↑ ${usedByCount}`}
         style={{
           padding: '4px 12px 8px',
           display: 'flex',

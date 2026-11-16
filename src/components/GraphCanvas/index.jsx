@@ -16,6 +16,12 @@ const edgeTypes = { animatedEdge: AnimatedEdge }
 const NODE_WIDTH = 200
 const NODE_HEIGHT = 70
 
+// Shared viewport options. `minZoom` must stay low: dagre layouts of wide
+// repositories need to zoom out far below 1 to fit the canvas, otherwise the
+// graph is clipped on the left/right edges.
+const FIT_VIEW_OPTIONS = { padding: 0.08, minZoom: 0.1, maxZoom: 1.2 }
+const MIN_ZOOM = 0.1
+
 function getLayoutedElements(nodes, edges, direction = 'TB') {
   const g = new dagre.graphlib.Graph()
   g.setDefaultEdgeLabel(() => ({}))
@@ -55,7 +61,7 @@ function getLayoutedElements(nodes, edges, direction = 'TB') {
 }
 
 // Inner component
-function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats, cyclicEdges, highlightIds, filteredNodeIds }, ref) {
+function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats, cyclicEdges, highlightIds, filteredNodeIds, onClearImpact }, ref) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const { fitView, setCenter } = useReactFlow()
@@ -96,7 +102,7 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
         height: 14,
       }
     })))
-    setTimeout(() => fitView({ padding: 0.05, minZoom: 0.8, maxZoom: 1.2, duration: 600 }), 150)
+    setTimeout(() => fitView({ ...FIT_VIEW_OPTIONS, duration: 600 }), 150)
   }, [initialNodes, initialEdges, fitView, setEdges, setNodes])
 
   const toggleLayout = useCallback(() => {
@@ -105,7 +111,7 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
     const layoutedNodes = getLayoutedElements(nodes, edges, next)
     setNodes(layoutedNodes)
     requestAnimationFrame(() => {
-      setTimeout(() => fitView({ padding: 0.05, minZoom: 0.8, maxZoom: 1.2, duration: 500 }), 100)
+      setTimeout(() => fitView({ ...FIT_VIEW_OPTIONS, duration: 500 }), 100)
     })
   }, [direction, edges, fitView, setNodes, nodes])
 
@@ -139,11 +145,11 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
       })
       return changed ? next : nds
     })
-  }, [visualMode, nodes, setNodes])
+  }, [visualMode, setNodes])
 
   // Build the Focus Mode neighbour set for the focused node
   const focusNeighbourSet = useCallback((nodeId, edgeList) => {
-    if (!nodeId) return null
+    if (!nodeId || !Array.isArray(edgeList)) return null
     const neighbours = new Set([nodeId])
     for (const e of edgeList) {
       if (e.source === nodeId) neighbours.add(e.target)
@@ -152,55 +158,85 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
     return neighbours
   }, [])
 
+  // Keep a live ref of the edges so the dimming effect can resolve the focus
+  // neighbourhood without re-running on every edge mutation.
+  const edgesRef = useRef(edges)
+  useEffect(() => { edgesRef.current = edges }, [edges])
+
   useEffect(() => {
     const searchActive = Boolean(searchTerm)
     const impactSet = Array.isArray(highlightIds) && highlightIds.length > 0
       ? new Set(highlightIds)
       : null
     const impactActive = Boolean(impactSet)
-    const filterSet = Array.isArray(filteredNodeIds) && filteredNodeIds.length > 0
-      ? new Set(filteredNodeIds)
-      : null
-    const filterActive = Boolean(filterSet)
-    const focusSet = focusNeighbourSet(focusNodeId, edges)
+    const filterActive = Array.isArray(filteredNodeIds)
+    const filterSet = filterActive ? new Set(filteredNodeIds) : null
+    const focusSet = focusNeighbourSet(focusNodeId, edgesRef.current)
     const focusActive = Boolean(focusSet)
 
-    setNodes(nds => nds.map(n => {
-      const q = (searchTerm || '').toLowerCase()
-      const matchesSearch = !searchActive ||
-        n.id.toLowerCase().includes(q) ||
-        (n.data?.label || '').toLowerCase().includes(q)
-      const inImpact = !impactActive || impactSet.has(n.id)
-      const inFilter = !filterActive || filterSet.has(n.id)
-      const inFocus = !focusActive || focusSet.has(n.id)
-      const isFocused = focusActive && n.id === focusNodeId
-      const visible = matchesSearch && inImpact && inFilter && inFocus
+    setNodes(nds => {
+      let changed = false
+      const next = nds.map(n => {
+        const q = (searchTerm || '').toLowerCase()
+        const matchesSearch = !searchActive ||
+          n.id.toLowerCase().includes(q) ||
+          (n.data?.label || '').toLowerCase().includes(q)
+        const inImpact = !impactActive || impactSet.has(n.id)
+        const inFilter = !filterActive || filterSet.has(n.id)
+        const inFocus = !focusActive || focusSet.has(n.id)
+        const isFocused = focusActive && n.id === focusNodeId
+        const visible = matchesSearch && inImpact && inFilter && inFocus
 
-      return {
-        ...n,
-        style: {
-          ...n.style,
-          opacity: (searchActive || impactActive || filterActive || focusActive) ? (visible ? 1 : 0.08) : undefined,
-          boxShadow: isFocused
-            ? '0 0 0 3px rgba(99,102,241,0.9), 0 0 24px rgba(99,102,241,0.4)'
-            : (impactActive && inImpact) ? '0 0 0 3px rgba(245,166,35,0.7)' : undefined,
-          transition: 'opacity 0.2s ease, box-shadow 0.2s ease',
+        const targetOpacity = (searchActive || impactActive || filterActive || focusActive) ? (visible ? 1 : 0.08) : undefined
+        const targetFocus = isFocused
+        const targetImpactHighlight = impactActive && inImpact && !isFocused
+
+        if (
+          n.style?.opacity === targetOpacity &&
+          n.data?.focused === targetFocus &&
+          n.data?.impactHighlighted === targetImpactHighlight
+        ) {
+          return n
         }
-      }
-    }))
 
-    setEdges(eds => eds.map(e => {
-      const inImpact = !impactActive || (impactSet.has(e.source) && impactSet.has(e.target))
-      const inFilter = !filterActive || (filterSet.has(e.source) && filterSet.has(e.target))
-      const inFocus = !focusActive || (focusSet.has(e.source) && focusSet.has(e.target))
-      if (!impactActive && !filterActive && !focusActive) {
-        if (!e.data?.impact && !e.data?.dimmed) return e
-        return { ...e, data: { ...e.data, impact: false, dimmed: false } }
-      }
-      const active = inImpact && inFilter && inFocus
-      return { ...e, data: { ...e.data, impact: inImpact && impactActive, dimmed: !active } }
-    }))
-  }, [searchTerm, highlightIds, filteredNodeIds, focusNodeId, edges, focusNeighbourSet, setNodes, setEdges])
+        changed = true
+        return {
+          ...n,
+          style: {
+            ...n.style,
+            opacity: targetOpacity,
+            transition: 'opacity 0.2s ease, box-shadow 0.2s ease',
+          },
+          data: {
+            ...n.data,
+            focused: targetFocus,
+            impactHighlighted: targetImpactHighlight,
+          },
+        }
+      })
+      return changed ? next : nds
+    })
+
+    setEdges(eds => {
+      let changed = false
+      const next = eds.map(e => {
+        const inImpact = !impactActive || (impactSet.has(e.source) && impactSet.has(e.target))
+        const inFilter = !filterActive || (filterSet.has(e.source) && filterSet.has(e.target))
+        const inFocus = !focusActive || (focusSet.has(e.source) && focusSet.has(e.target))
+
+        const targetImpact = inImpact && impactActive
+        const targetDimmed = !(inImpact && inFilter && inFocus) && (impactActive || filterActive || focusActive)
+
+        if ((e.data?.impact || false) === targetImpact && (e.data?.dimmed || false) === targetDimmed) {
+          return e
+        }
+
+        changed = true
+        return { ...e, data: { ...e.data, impact: targetImpact, dimmed: targetDimmed } }
+      })
+      return changed ? next : eds
+    })
+  }, [searchTerm, highlightIds, filteredNodeIds, focusNodeId, focusNeighbourSet, setNodes, setEdges])
 
   const onConnect = useCallback(
     (params) => setEdges(eds => addEdge({ ...params, animated: true }, eds)),
@@ -230,8 +266,8 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-        fitViewOptions={{ padding: 0.05, minZoom: 0.8, maxZoom: 1.2 }}
-        minZoom={0.6}
+        fitViewOptions={FIT_VIEW_OPTIONS}
+        minZoom={MIN_ZOOM}
         maxZoom={2}
         nodesDraggable={true}
         defaultEdgeOptions={{ type: 'animatedEdge' }}
@@ -241,6 +277,29 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
         {/* Layout + visual-mode toggles */}
         <Panel position="bottom-center">
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {/* Impact Mode Indicator */}
+            {Array.isArray(highlightIds) && highlightIds.length > 0 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '6px 12px',
+                background: 'rgba(245, 158, 11, 0.2)',
+                border: '1px solid rgba(245, 158, 11, 0.6)',
+                borderRadius: '20px',
+                fontSize: '11px',
+                color: '#fde68a',
+                fontWeight: '600',
+                backdropFilter: 'blur(8px)',
+              }}>
+                <span>💥 Impact View ({Math.max(0, highlightIds.length - 1)} affected)</span>
+                {onClearImpact && (
+                  <button
+                    onClick={onClearImpact}
+                    style={{ background: 'none', border: 'none', color: '#fde68a', cursor: 'pointer', fontSize: '13px', padding: 0, lineHeight: 1 }}
+                    title="Exit impact view"
+                  >×</button>
+                )}
+              </div>
+            )}
             {/* Focus Mode Indicator */}
             {focusNodeId && (
               <div style={{
@@ -361,17 +420,23 @@ function FlowInner({ initialNodes, initialEdges, onNodeClick, searchTerm, stats,
           </div>
         </Panel>
 
-        <Controls style={{
-          background: '#1a1a1a',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '8px',
-          boxShadow: 'none'
-        }} />
-        <MiniMap
+        <Controls
+          fitViewOptions={FIT_VIEW_OPTIONS}
           style={{
             background: '#1a1a1a',
             border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '8px'
+            borderRadius: '8px',
+            boxShadow: 'none'
+          }}
+        />
+        <MiniMap
+          bgColor="rgba(13, 17, 28, 0.92)"
+          maskColor="rgba(4, 7, 12, 0.72)"
+          maskStrokeColor="rgba(129, 140, 248, 0.9)"
+          style={{
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '8px',
+            overflow: 'hidden'
           }}
           nodeColor={n => {
             const colors = {

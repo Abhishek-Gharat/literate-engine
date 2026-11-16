@@ -39,6 +39,7 @@ export default function App() {
     cyclicEdges,
     depMap,
     stats,
+    unresolvedImports,
     loading: analysisLoading,
     error: analysisError
   } = useGraphBuilder()
@@ -90,8 +91,8 @@ export default function App() {
 
   // Prioritized architecture issues from real graph signals
   const prioritizedIssues = useMemo(() => {
-    return prioritizeIssues({ nodes, edges, cyclicEdges, stats })
-  }, [nodes, edges, cyclicEdges, stats])
+    return prioritizeIssues({ nodes, edges, cyclicEdges, stats, unresolvedImports })
+  }, [nodes, edges, cyclicEdges, stats, unresolvedImports])
 
   // Run diff: compare selectedRun vs latest run in the project (only meaningful if not the latest)
   const runDiffResult = useMemo(() => {
@@ -113,6 +114,10 @@ export default function App() {
     }
 
     const unresolvedNodeIds = new Set()
+    for (const item of unresolvedImports || []) {
+      const src = item.source || item.file
+      if (src) unresolvedNodeIds.add(src)
+    }
     for (const n of nodes) {
       if (n.unresolvedImports?.length || n.data?.unresolvedImports?.length) {
         unresolvedNodeIds.add(n.id)
@@ -139,7 +144,7 @@ export default function App() {
       }
     }
     return matching
-  }, [nodes, cyclicEdges, typeFilter, riskFilter, issueFilter])
+  }, [nodes, cyclicEdges, typeFilter, riskFilter, issueFilter, unresolvedImports])
 
   // Demo run representation for runs history
   const demoRunItem = useMemo(() => ({
@@ -183,22 +188,25 @@ export default function App() {
     setRiskFilter('all')
     setIssueFilter('all')
     setSearch('')
+    setShowImpact(false)
+    closeInspector()
+    setIsAiInspectorOpen(false)
     loadSnapshot({
       nodes: snapshot.nodes,
       edges: snapshot.edges,
       depMap: snapshot.depMap,
       cyclicEdges: snapshot.cyclicEdges,
       stats: run.stats,
-      unresolvedImports: run.unresolvedImports,
-      analysisErrors: run.analysisErrors,
+      unresolvedImports: run.unresolvedImports || snapshot.unresolvedImports || [],
+      analysisErrors: run.analysisErrors || snapshot.analysisErrors || [],
       runId: run.id
     })
     setSelectedRun(run)
     setNavTab('architecture')
-  }, [loadSnapshot])
+  }, [loadSnapshot, closeInspector])
 
   // Demo Project Launcher
-  const handleTryDemo = useCallback(() => {
+  const handleTryDemo = useCallback((targetTab = 'overview') => {
     setIsProjectMenuOpen(false)
     setTypeFilter('all')
     setRiskFilter('all')
@@ -216,9 +224,34 @@ export default function App() {
     setSelectedRun(demoRunItem)
     handleLoadRun(DEMO_ANALYSIS_RESULT, demoRunItem)
     setDemoMode(true)
-    setNavTab('overview')
-    syncStateToUrl(demoProj, 'overview', demoRunItem)
+    setNavTab(targetTab)
+    syncStateToUrl(demoProj, targetTab, demoRunItem)
   }, [handleLoadRun, demoRunItem, syncStateToUrl])
+
+  // The runs list endpoint returns metadata only (no snapshot). Fetch the full
+  // run detail for the runs the UI needs up front, otherwise the architecture
+  // view opens empty when a run is linked via the URL.
+  const loadRunDetail = useCallback(async (run) => {
+    if (!run) return null
+    if (run.snapshot) return run
+    try {
+      const full = await getRun(run.id)
+      if (full?.snapshot) return { ...run, ...full }
+    } catch (e) {
+      console.warn('Failed to load run details:', e)
+    }
+    return run
+  }, [])
+
+  const hydrateRuns = useCallback(async (runList, extraIds = []) => {
+    if (!Array.isArray(runList) || runList.length === 0) return runList || []
+    const targets = new Set([runList[0]?.id, ...extraIds].filter(Boolean))
+    const hydrated = []
+    for (const run of runList) {
+      hydrated.push(targets.has(run.id) ? await loadRunDetail(run) : run)
+    }
+    return hydrated
+  }, [loadRunDetail])
 
   // Exit demo cleanly without leaving stale demo data
   const handleExitDemo = useCallback(() => {
@@ -236,8 +269,8 @@ export default function App() {
     if (projects.length > 0) {
       const first = projects[0]
       setSelectedProject(first)
-      listRuns(first.id).then(r => {
-        setRuns(r || [])
+      listRuns(first.id).then(async r => {
+        setRuns(await hydrateRuns(r))
         setSelectedRun(null)
         setNavTab('overview')
         syncStateToUrl(first, 'overview', null)
@@ -249,7 +282,7 @@ export default function App() {
       setNavTab('overview')
       syncStateToUrl(null, 'overview', null)
     }
-  }, [resetGraph, closeInspector, projects, syncStateToUrl])
+  }, [resetGraph, closeInspector, projects, syncStateToUrl, hydrateRuns])
 
   // Select project handler (Project Home / Overview by default)
   const handleSelectProject = useCallback(async (project) => {
@@ -272,12 +305,12 @@ export default function App() {
 
     try {
       const projectRuns = await listRuns(project.id)
-      setRuns(projectRuns || [])
+      setRuns(await hydrateRuns(projectRuns))
       syncStateToUrl(project, 'overview', null)
     } catch (err) {
       console.error('Failed to fetch runs for project:', err)
     }
-  }, [resetGraph, closeInspector, syncStateToUrl])
+  }, [resetGraph, closeInspector, syncStateToUrl, hydrateRuns])
 
   // Load project list on mount and handle initial URL state / refresh restoration
   useEffect(() => {
@@ -292,8 +325,7 @@ export default function App() {
         const urlRun = params.get('run')
 
         if (urlProject === 'demo') {
-          handleTryDemo()
-          if (urlTab) setNavTab(urlTab)
+          handleTryDemo(urlTab || 'overview')
           return
         }
 
@@ -302,13 +334,14 @@ export default function App() {
           if (matchedProj) {
             setSelectedProject(matchedProj)
             const projectRuns = await listRuns(matchedProj.id)
-            setRuns(projectRuns || [])
+            const hydratedRuns = await hydrateRuns(projectRuns, urlRun ? [urlRun] : [])
+            setRuns(hydratedRuns || [])
             if (urlTab === 'architecture') {
-              if (urlRun && projectRuns) {
-                const matchedRun = projectRuns.find(r => r.id === urlRun)
+              if (urlRun && hydratedRuns) {
+                const matchedRun = hydratedRuns.find(r => r.id === urlRun)
                 if (matchedRun?.snapshot) handleLoadRun(matchedRun.snapshot, matchedRun)
-              } else if (projectRuns && projectRuns.length > 0) {
-                handleLoadRun(projectRuns[0].snapshot, projectRuns[0])
+              } else if (hydratedRuns && hydratedRuns.length > 0) {
+                handleLoadRun(hydratedRuns[0].snapshot, hydratedRuns[0])
               }
             }
             setNavTab(urlTab || 'overview')
@@ -321,10 +354,12 @@ export default function App() {
           const first = allProjects[0]
           setSelectedProject(first)
           const firstRuns = await listRuns(first.id)
-          setRuns(firstRuns || [])
-          if (urlTab === 'architecture' && firstRuns && firstRuns.length > 0) {
-            setSelectedRun(firstRuns[0])
-            if (firstRuns[0].snapshot) handleLoadRun(firstRuns[0].snapshot, firstRuns[0])
+          const hydratedFirstRuns = await hydrateRuns(firstRuns, urlRun ? [urlRun] : [])
+          setRuns(hydratedFirstRuns || [])
+          if (urlTab === 'architecture' && hydratedFirstRuns && hydratedFirstRuns.length > 0) {
+            const targetRun = (urlRun && hydratedFirstRuns.find(r => r.id === urlRun)) || hydratedFirstRuns[0]
+            setSelectedRun(targetRun)
+            if (targetRun.snapshot) handleLoadRun(targetRun.snapshot, targetRun)
             setNavTab('architecture')
           } else {
             setNavTab(urlTab || 'overview')
@@ -348,8 +383,7 @@ export default function App() {
       const urlRun = params.get('run')
 
       if (urlProject === 'demo') {
-        handleTryDemo()
-        if (urlTab) setNavTab(urlTab)
+        handleTryDemo(urlTab || 'overview')
         return
       }
 
@@ -359,13 +393,14 @@ export default function App() {
         if (matched) {
           setSelectedProject(matched)
           const projectRuns = await listRuns(matched.id)
-          setRuns(projectRuns || [])
+          const hydratedRuns = await hydrateRuns(projectRuns, urlRun ? [urlRun] : [])
+          setRuns(hydratedRuns || [])
           if (urlTab === 'architecture') {
-            if (urlRun && projectRuns) {
-              const matchedRun = projectRuns.find(r => r.id === urlRun)
+            if (urlRun && hydratedRuns) {
+              const matchedRun = hydratedRuns.find(r => r.id === urlRun)
               if (matchedRun?.snapshot) handleLoadRun(matchedRun.snapshot, matchedRun)
-            } else if (projectRuns && projectRuns.length > 0) {
-              handleLoadRun(projectRuns[0].snapshot, projectRuns[0])
+            } else if (hydratedRuns && hydratedRuns.length > 0) {
+              handleLoadRun(hydratedRuns[0].snapshot, hydratedRuns[0])
             }
           } else {
             setSelectedRun(null)
@@ -377,7 +412,7 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [handleTryDemo, handleLoadRun])
+  }, [handleTryDemo, handleLoadRun, hydrateRuns])
 
   // Click outside to close project selector dropdown
   useEffect(() => {
@@ -463,10 +498,11 @@ export default function App() {
       await buildGraph(files, projectId)
       if (projectId) {
         const updatedRuns = await listRuns(projectId)
-        setRuns(updatedRuns || [])
-        if (updatedRuns && updatedRuns.length > 0) {
-          setSelectedRun(updatedRuns[0])
-          syncStateToUrl(selectedProject, 'architecture', updatedRuns[0])
+        const hydrated = await hydrateRuns(updatedRuns)
+        setRuns(hydrated || [])
+        if (hydrated && hydrated.length > 0) {
+          setSelectedRun(hydrated[0])
+          syncStateToUrl(selectedProject, 'architecture', hydrated[0])
         }
       }
       setNavTab('architecture')
@@ -474,7 +510,7 @@ export default function App() {
       console.error('Build graph failed:', err)
       throw err
     }
-  }, [buildGraph, selectedProject, syncStateToUrl])
+  }, [buildGraph, selectedProject, syncStateToUrl, hydrateRuns])
 
   // Navigation tab change handler with URL sync
   const handleNavTabChange = useCallback((newTab) => {
@@ -485,7 +521,6 @@ export default function App() {
   // Node selection & blast radius calculation
   const handleNodeClick = (node) => {
     selectNode(node?.data || node)
-    setIsAiInspectorOpen(true)
   }
 
   const blastRadius = useMemo(() => {
@@ -592,10 +627,15 @@ export default function App() {
         padding: '0 16px',
         gap: '10px',
         zIndex: 30,
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+        // Narrow viewports: let the bar scroll instead of letting the
+        // clusters overlap each other.
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        scrollbarWidth: 'none'
       }}>
         {/* Left: Identity, Project Selector & Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '0 1 auto', minWidth: 0, overflow: 'hidden', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '0 1 auto', minWidth: '150px', overflow: 'hidden', zIndex: 1, flexShrink: 1 }}>
           <div style={{
             width: '26px',
             height: '26px',
@@ -823,7 +863,7 @@ export default function App() {
         </div>
 
         {/* Right: Demo Toggle + Global Settings + Engine Status */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flex: '1 1 0', minWidth: 0, zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flex: '0 0 auto', marginLeft: 'auto', zIndex: 1 }}>
           {demoMode ? (
             <button
               type="button"
@@ -946,6 +986,15 @@ export default function App() {
               }}
               onStartNewAnalysis={() => handleNavTabChange('import')}
               onViewRuns={() => handleNavTabChange('runs')}
+              onViewIssues={async () => {
+                const target = runs && runs.length > 0 ? runs[0] : null
+                if (target?.snapshot) {
+                  handleLoadRun(target.snapshot, target)
+                  syncStateToUrl(selectedProject, 'architecture', target)
+                }
+                setNavTab('architecture')
+                setIssuesPanelOpen(true)
+              }}
               onOpenRun={(run) => handleSelectRun(run)}
               onTryDemo={handleTryDemo}
             />
@@ -1071,12 +1120,14 @@ export default function App() {
                     searchTerm={search}
                     stats={stats}
                     cyclicEdges={cyclicEdges}
+                    onClearImpact={() => setShowImpact(false)}
                   />
                   <IssuesPanel
                     nodes={nodes}
                     edges={edges}
                     cyclicEdges={cyclicEdges}
                     stats={stats}
+                    unresolvedImports={unresolvedImports}
                     onNodeClick={(node) => {
                       handleNodeClick(node)
                       graphCanvasRef.current?.focusNode(node.id)
