@@ -37,7 +37,6 @@ export function useGraphBuilder() {
     setRunId(null)
 
     try {
-      let analysis
       // Always attempt backend analysis first (works via relative /api or configured API_URL)
       let analysis
       try {
